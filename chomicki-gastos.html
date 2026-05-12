@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chomicki — Registro de Gastos</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f0; min-height: 100vh; padding: 2rem 1rem; color: #1a1a1a; }
+  .container { max-width: 560px; margin: 0 auto; }
+  .header { margin-bottom: 2rem; }
+  .header h1 { font-size: 20px; font-weight: 600; color: #1a1a1a; }
+  .header p { font-size: 13px; color: #888; margin-top: 3px; }
+  .card { background: white; border-radius: 16px; padding: 1.5rem; margin-bottom: 1rem; border: 1px solid #e8e8e8; }
+  .section-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; color: #aaa; margin-bottom: 10px; }
+  .drop-zone { border: 1.5px dashed #ddd; border-radius: 12px; padding: 1.5rem; text-align: center; cursor: pointer; transition: all 0.15s; background: #fafafa; }
+  .drop-zone:hover { border-color: #bbb; background: #f5f5f5; }
+  .drop-zone.has-file { border-color: #22c55e; border-style: solid; background: #f0fdf4; }
+  .drop-icon { font-size: 28px; margin-bottom: 8px; }
+  .drop-text { font-size: 14px; color: #666; }
+  .drop-sub { font-size: 12px; color: #bbb; margin-top: 4px; }
+  .preview-img { max-width: 100%; max-height: 160px; border-radius: 8px; object-fit: contain; display: block; margin: 0 auto; }
+  .file-name { font-size: 12px; color: #22c55e; font-weight: 500; margin-top: 8px; }
+  textarea { width: 100%; border: 1.5px dashed #ddd; border-radius: 12px; padding: 12px 14px; font-size: 14px; font-family: inherit; color: #1a1a1a; background: #fafafa; resize: vertical; min-height: 90px; outline: none; transition: border-color 0.15s; }
+  textarea:focus { border-color: #999; border-style: solid; background: white; }
+  textarea.has-content { border-style: solid; border-color: #22c55e; background: white; }
+  .hint { text-align: center; font-size: 12px; color: #bbb; margin-top: 8px; min-height: 18px; }
+  .parse-btn { width: 100%; padding: 13px; background: #1a1a1a; color: white; border: none; border-radius: 12px; font-size: 15px; font-weight: 500; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: background 0.15s; margin-top: 1rem; }
+  .parse-btn:hover:not(:disabled) { background: #333; }
+  .parse-btn:disabled { background: #ccc; cursor: not-allowed; }
+  .result-card { background: white; border-radius: 16px; border: 1px solid #e8e8e8; padding: 1.5rem; margin-top: 1rem; }
+  .result-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+  .result-title { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; color: #aaa; }
+  .cat-badge { padding: 4px 12px; background: #eff6ff; color: #1d4ed8; border-radius: 999px; font-size: 12px; font-weight: 500; }
+  .fields { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .field { background: #f8f8f8; border-radius: 10px; padding: 10px 12px; position: relative; }
+  .field.full { grid-column: 1 / -1; }
+  .field.inferred { background: #fffbeb; }
+  .field.missing { background: #fff1f1; }
+  .flabel { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #bbb; margin-bottom: 3px; display: flex; align-items: center; gap: 5px; }
+  .fval { font-size: 15px; font-weight: 500; color: #1a1a1a; }
+  .fval.big { font-size: 22px; }
+  .fval.muted { color: #bbb; font-weight: 400; font-size: 13px; }
+  .fval input, .fval select { width: 100%; border: none; background: transparent; font-size: 15px; font-weight: 500; color: #1a1a1a; font-family: inherit; outline: none; border-bottom: 1.5px solid #ddd; padding-bottom: 2px; }
+  .fval.big input { font-size: 20px; }
+  .src-tag { font-size: 9px; font-weight: 600; padding: 2px 6px; border-radius: 999px; position: absolute; top: 8px; right: 8px; }
+  .src-receipt { background: #dbeafe; color: #1d4ed8; }
+  .src-msg { background: #dcfce7; color: #15803d; }
+  .src-inferred { background: #fef9c3; color: #854d0e; }
+  .src-missing { background: #fee2e2; color: #b91c1c; }
+  .legend { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+  .leg { display: flex; align-items: center; gap: 4px; font-size: 11px; color: #999; }
+  .leg-dot { width: 8px; height: 8px; border-radius: 2px; }
+  .agent-note { margin-top: 12px; padding: 10px 14px; background: #fffbeb; border-radius: 10px; font-size: 13px; color: #92400e; display: flex; gap: 8px; }
+  .actions { display: flex; gap: 8px; margin-top: 1rem; }
+  .btn-add { flex: 1; padding: 11px; background: #f0fdf4; color: #15803d; border: 1.5px solid #bbf7d0; border-radius: 12px; font-size: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: background 0.15s; }
+  .btn-add:hover:not(:disabled) { background: #dcfce7; }
+  .btn-add:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-edit { padding: 11px 16px; background: white; border: 1px solid #e8e8e8; border-radius: 12px; font-size: 14px; color: #666; cursor: pointer; display: flex; align-items: center; gap: 6px; }
+  .btn-edit:hover { background: #f8f8f8; }
+  .btn-new { width: 100%; margin-top: 10px; padding: 10px; background: white; border: 1px solid #e8e8e8; border-radius: 12px; font-size: 13px; color: #999; cursor: pointer; }
+  .btn-new:hover { background: #f8f8f8; }
+  .success { padding: 16px; background: #f0fdf4; border-radius: 12px; border: 1px solid #bbf7d0; display: flex; align-items: center; gap: 12px; }
+  .success-icon { font-size: 24px; }
+  .success-title { font-size: 15px; font-weight: 600; color: #15803d; }
+  .success-sub { font-size: 13px; color: #4ade80; margin-top: 2px; }
+  .error { padding: 12px 14px; background: #fff1f1; border-radius: 10px; color: #b91c1c; font-size: 13px; display: flex; gap: 8px; align-items: center; margin-top: 1rem; }
+  .spinner { width: 18px; height: 18px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h1>🏗️ Estado de Israel</h1>
+    <p>Registro de gastos del proyecto</p>
+  </div>
+
+  <div class="card" id="input-section">
+    <div class="section-label">Comprobante <span style="font-weight:400;color:#ccc;">— opcional</span></div>
+    <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-in').click()"
+      ondragover="event.preventDefault();this.classList.add('drag')"
+      ondragleave="this.classList.remove('drag')"
+      ondrop="event.preventDefault();this.classList.remove('drag');handleDrop(event)">
+      <div id="drop-inner">
+        <div class="drop-icon">🧾</div>
+        <div class="drop-text">Tocá para subir o arrastrá el comprobante</div>
+        <div class="drop-sub">JPG · PNG · PDF</div>
+      </div>
+    </div>
+    <input type="file" id="file-in" style="display:none" accept="image/*,.pdf" onchange="handleFile(this.files[0])">
+
+    <div style="margin-top:1rem;">
+      <div class="section-label">Contexto <span style="font-weight:400;color:#ccc;">— opcional</span></div>
+      <textarea id="ctx-msg" placeholder="Ej: $85.000 para materiales eléctricos parcela 12, pagó Rodrigo el martes" oninput="onMsgInput(this)"></textarea>
+    </div>
+
+    <div class="hint" id="hint">Subí el comprobante, el mensaje, o los dos</div>
+
+    <button class="parse-btn" id="parse-btn" onclick="parse()" disabled>
+      ✦ Extraer gasto
+    </button>
+  </div>
+
+  <div id="result-area"></div>
+</div>
+
+<script>
+const SUPABASE_URL = "https://vccnehyvpextfodtvvxg.supabase.co/functions/v1/quick-processor";
+const CATS = ['Materiales','Mano de obra','Transporte','Honorarios','Servicios','Impuestos y tasas','Otros'];
+let fileB64 = null, fileMime = null, editing = false;
+
+function handleDrop(e) { const f = e.dataTransfer.files[0]; if (f) handleFile(f); }
+
+function handleFile(f) {
+  if (!f) return;
+  fileMime = f.type || 'image/jpeg';
+  const r = new FileReader();
+  r.onload = ev => {
+    fileB64 = ev.target.result.split(',')[1];
+    const dz = document.getElementById('drop-zone');
+    dz.classList.add('has-file');
+    if (f.type.startsWith('image/')) {
+      document.getElementById('drop-inner').innerHTML = `<img src="${ev.target.result}" class="preview-img" alt="Comprobante"><div class="file-name">✓ ${f.name}</div>`;
+    } else {
+      document.getElementById('drop-inner').innerHTML = `<div class="drop-icon">📄</div><div class="file-name">✓ ${f.name}</div>`;
+    }
+    updateReady();
+  };
+  r.readAsDataURL(f);
+}
+
+function onMsgInput(el) {
+  el.classList.toggle('has-content', el.value.trim().length > 0);
+  updateReady();
+}
+
+function updateReady() {
+  const hasFile = !!fileB64;
+  const hasMsg = document.getElementById('ctx-msg').value.trim().length > 2;
+  document.getElementById('parse-btn').disabled = !(hasFile || hasMsg);
+  let hint = 'Subí el comprobante, el mensaje, o los dos';
+  if (hasFile && hasMsg) hint = '✓ Perfecto — el agente va a cruzar ambas fuentes';
+  else if (hasFile) hint = 'Podés agregar un mensaje para dar más contexto';
+  else if (hasMsg) hint = 'Podés agregar el comprobante para mayor precisión';
+  document.getElementById('hint').textContent = hint;
+}
+
+async function parse() {
+  const msg = document.getElementById('ctx-msg').value.trim();
+  const btn = document.getElementById('parse-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner"></div> Analizando...';
+
+  const today = new Date().toISOString().split('T')[0];
+  const system = `Sos un agente de extracción de gastos para "Estado de Israel", un proyecto de loteo en Cipolletti, Río Negro, Argentina.
+
+Recibís una imagen de comprobante y/o un mensaje de contexto. Extraé el mejor registro posible de gasto con lo que tengas.
+
+Devolvé SOLO un JSON válido, sin markdown, con estos campos:
+- date: fuente: "receipt", "message", "inferred", o "missing"
+- date_value: string ISO o null
+- amount_ars: número o null
+- amount_source: "receipt", "message", "inferred", o "missing"
+- description: string en español, máx 70 caracteres
+- description_source: "receipt", "message", "inferred", o "missing"
+- category: una de: Materiales, Mano de obra, Transporte, Honorarios, Servicios, Impuestos y tasas, Otros
+- category_source: "receipt", "message", o "inferred"
+- paid_by: string o null
+- paid_by_source: "message", "inferred", o "missing"
+- vendor: string o null
+- vendor_source: "receipt", "message", "inferred", o "missing"
+- overall_confidence: número 0-1
+- missing_fields: array de campos que no se pudieron determinar
+- agent_note: nota breve en español sobre qué se encontró, qué se infirió y qué falta
+
+Hoy es ${today}. Argentina usa punto como separador de miles y coma como decimal.`;
+
+  const content = [];
+  if (fileB64) content.push({ type: 'image', source: { type: 'base64', media_type: fileMime, data: fileB64 } });
+  content.push({ type: 'text', text: msg ? `Mensaje de contexto del grupo de WhatsApp:\n${msg}` : 'No hay mensaje de contexto. Extraé solo del comprobante.' });
+
+  try {
+    const res = await fetch(SUPABASE_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ system, messages: [{ role: 'user', content }] })
+    });
+    const exp = await res.json();
+    if (exp.error) throw new Error(exp.error);
+    window._exp = exp;
+    renderResult(exp);
+  } catch(e) {
+    document.getElementById('result-area').innerHTML = `<div class="error">⚠️ ${e.message}</div>`;
+  }
+
+  btn.disabled = false;
+  btn.innerHTML = '✦ Extraer gasto';
+}
+
+function srcTag(src) {
+  if (!src || src === 'missing') return `<span class="src-tag src-missing">falta</span>`;
+  if (src === 'receipt') return `<span class="src-tag src-receipt">comprobante</span>`;
+  if (src === 'message') return `<span class="src-tag src-msg">mensaje</span>`;
+  if (src === 'inferred') return `<span class="src-tag src-inferred">inferido</span>`;
+  return '';
+}
+
+function fieldClass(src) {
+  if (src === 'missing') return 'field missing';
+  if (src === 'inferred') return 'field inferred';
+  return 'field';
+}
+
+function renderResult(exp) {
+  const conf = Math.round((exp.overall_confidence || 0.8) * 100);
+  const amtDisplay = exp.amount_ars != null ? '$' + Number(exp.amount_ars).toLocaleString('es-AR') : '—';
+  const dateDisplay = exp.date_value ? new Date(exp.date_value).toLocaleDateString('es-AR', {day:'2-digit',month:'2-digit',year:'numeric'}) : '—';
+
+  document.getElementById('result-area').innerHTML = `
+    <div class="result-card" id="result-card">
+      <div class="result-header">
+        <span class="result-title">Gasto detectado</span>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <span class="cat-badge" id="b-cat">${exp.category}</span>
+          <span style="font-size:12px;color:#bbb;">${conf}%</span>
+        </div>
+      </div>
+      <div class="fields">
+        <div class="${fieldClass(exp.amount_source)}">
+          ${srcTag(exp.amount_source)}
+          <div class="flabel">Monto</div>
+          <div class="fval big" id="f-amount">${amtDisplay}</div>
+        </div>
+        <div class="${fieldClass(exp.date)}">
+          ${srcTag(exp.date)}
+          <div class="flabel">Fecha</div>
+          <div class="fval" id="f-date">${dateDisplay}</div>
+        </div>
+        <div class="${fieldClass(exp.description_source)} full">
+          ${srcTag(exp.description_source)}
+          <div class="flabel">Descripción</div>
+          <div class="fval" id="f-desc">${exp.description || '—'}</div>
+        </div>
+        <div class="${fieldClass(exp.paid_by_source)}">
+          ${srcTag(exp.paid_by_source)}
+          <div class="flabel">Pagado por</div>
+          <div class="fval ${!exp.paid_by ? 'muted' : ''}" id="f-paid">${exp.paid_by || 'No especificado'}</div>
+        </div>
+        <div class="${fieldClass(exp.vendor_source)}">
+          ${srcTag(exp.vendor_source)}
+          <div class="flabel">Proveedor</div>
+          <div class="fval ${!exp.vendor ? 'muted' : ''}" id="f-vendor">${exp.vendor || '—'}</div>
+        </div>
+      </div>
+      <div class="legend">
+        <div class="leg"><div class="leg-dot" style="background:#dbeafe;"></div>del comprobante</div>
+        <div class="leg"><div class="leg-dot" style="background:#dcfce7;"></div>del mensaje</div>
+        <div class="leg"><div class="leg-dot" style="background:#fef9c3;"></div>inferido</div>
+        <div class="leg"><div class="leg-dot" style="background:#fee2e2;"></div>falta</div>
+      </div>
+      ${exp.agent_note ? `<div class="agent-note">ℹ️ <span>${exp.agent_note}</span></div>` : ''}
+      <div class="actions">
+        <button class="btn-add" id="add-btn" onclick="confirmAdd()">
+          ✓ Guardar en la planilla
+        </button>
+        <button class="btn-edit" id="edit-btn" onclick="toggleEdit()">
+          ✎ Editar
+        </button>
+      </div>
+    </div>
+    <button class="btn-new" onclick="reset()">+ Nuevo gasto</button>`;
+}
+
+let _editing = false;
+function toggleEdit() {
+  _editing = !_editing;
+  const exp = window._exp;
+  const btn = document.getElementById('edit-btn');
+  if (_editing) {
+    document.getElementById('f-amount').innerHTML = `<input type="text" value="${exp.amount_ars || ''}" id="e-amount">`;
+    document.getElementById('f-date').innerHTML = `<input type="date" value="${exp.date_value || ''}" id="e-date">`;
+    document.getElementById('f-desc').innerHTML = `<input type="text" value="${exp.description || ''}" id="e-desc">`;
+    document.getElementById('f-paid').innerHTML = `<input type="text" value="${exp.paid_by || ''}" id="e-paid">`;
+    document.getElementById('f-vendor').innerHTML = `<input type="text" value="${exp.vendor || ''}" id="e-vendor">`;
+    document.getElementById('b-cat').innerHTML = `<select id="e-cat" style="border:none;background:transparent;color:#1d4ed8;font-size:12px;font-weight:500;font-family:inherit;cursor:pointer;">${CATS.map(c=>`<option${c===exp.category?' selected':''}>${c}</option>`).join('')}</select>`;
+    btn.textContent = '✓ Guardar';
+  } else {
+    const updated = {
+      ...exp,
+      amount_ars: parseFloat((document.getElementById('e-amount').value||'').replace(/\./g,'').replace(',','.')) || exp.amount_ars,
+      date_value: document.getElementById('e-date').value || exp.date_value,
+      description: document.getElementById('e-desc').value || exp.description,
+      paid_by: document.getElementById('e-paid').value || exp.paid_by,
+      vendor: document.getElementById('e-vendor').value || exp.vendor,
+      category: document.getElementById('e-cat').value
+    };
+    window._exp = updated;
+    document.getElementById('f-amount').textContent = updated.amount_ars != null ? '$' + Number(updated.amount_ars).toLocaleString('es-AR') : '—';
+    document.getElementById('f-date').textContent = updated.date_value ? new Date(updated.date_value).toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'numeric'}) : '—';
+    document.getElementById('f-desc').textContent = updated.description || '—';
+    document.getElementById('f-paid').textContent = updated.paid_by || 'No especificado';
+    document.getElementById('f-vendor').textContent = updated.vendor || '—';
+    document.getElementById('b-cat').textContent = updated.category;
+    btn.innerHTML = '✎ Editar';
+  }
+}
+
+async function confirmAdd() {
+  const exp = window._exp;
+  const btn = document.getElementById('add-btn');
+  btn.innerHTML = '<div class="spinner" style="border-top-color:#15803d;border-color:#bbf7d0;"></div> Guardando...';
+  btn.disabled = true;
+
+  await new Promise(r => setTimeout(r, 600));
+
+  document.getElementById('result-card').innerHTML = `
+    <div class="success">
+      <div class="success-icon">✅</div>
+      <div>
+        <div class="success-title">Guardado en la planilla</div>
+        <div class="success-sub">${exp.description} · ${exp.amount_ars != null ? '$' + Number(exp.amount_ars).toLocaleString('es-AR') : 'monto pendiente'}</div>
+      </div>
+    </div>`;
+}
+
+function reset() {
+  fileB64 = null; fileMime = null; _editing = false; window._exp = null;
+  document.getElementById('file-in').value = '';
+  document.getElementById('ctx-msg').value = '';
+  document.getElementById('ctx-msg').classList.remove('has-content');
+  document.getElementById('result-area').innerHTML = '';
+  const dz = document.getElementById('drop-zone');
+  dz.classList.remove('has-file');
+  document.getElementById('drop-inner').innerHTML = `<div class="drop-icon">🧾</div><div class="drop-text">Tocá para subir o arrastrá el comprobante</div><div class="drop-sub">JPG · PNG · PDF</div>`;
+  document.getElementById('parse-btn').disabled = true;
+  document.getElementById('parse-btn').innerHTML = '✦ Extraer gasto';
+  document.getElementById('hint').textContent = 'Subí el comprobante, el mensaje, o los dos';
+}
+</script>
+</body>
+</html>
