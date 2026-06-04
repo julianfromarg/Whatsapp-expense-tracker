@@ -164,6 +164,7 @@
     <button class="nav-tab" onclick="showPage('historial')">Historial WA</button>
   </div>
   <div class="nav-right">
+    <button class="btn-danger" onclick="clearData()" style="padding:5px 12px;border-radius:6px;cursor:pointer;font-family:var(--mono);font-size:11px;border:1px solid rgba(224,90,90,0.3);background:transparent;color:#e05a5a;transition:all 0.15s" onmouseover="this.style.background='rgba(224,90,90,0.1)'" onmouseout="this.style.background='transparent'">⚠ Borrar datos</button>
     <div class="tc-badge" onclick="actualizarTC()" title="Click para actualizar">USD/ARS <span id="tcValor">cargando...</span></div>
   </div>
 </nav>
@@ -354,7 +355,7 @@
 
 <script>
 const SUPABASE_URL = 'https://vccnehyvpextfodtvvxg.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_1bJrReAF0i4tCvfbzCxv7A_YMdghfo1';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZjY25laHl2cGV4dGZvZHR2dnhnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU5NTM5NzAsImV4cCI6MjA2MTUyOTk3MH0.LbkMMiJDIiLjgZy3s4iqhf_9FxzjvRD8clRTFX4h_Po';
 const EDGE_URL = 'https://vccnehyvpextfodtvvxg.supabase.co/functions/v1/quick-processor';
 
 let allGastos = [];
@@ -813,6 +814,29 @@ function fmtFecha(f) {
   if (!f) return '—';
   const [y,m,d] = f.split('-');
   return `${d}/${m}/${y}`;
+}
+
+// ---- CLEAR DATA ----
+async function clearData() {
+  const confirm1 = confirm('⚠️ ¿Seguro que querés borrar TODOS los gastos?\nEsta acción no se puede deshacer.');
+  if (!confirm1) return;
+  const confirm2 = confirm('¿Estás completamente seguro? Se borrarán todos los registros de la base de datos.');
+  if (!confirm2) return;
+
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/constructora_gastos?id=neq.00000000-0000-0000-0000-000000000000`, {
+    method: 'DELETE',
+    headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+  });
+
+  if (r.ok) {
+    allGastos = [];
+    filtrados = [];
+    renderDashboard();
+    renderTabla();
+    alert('✅ Datos borrados correctamente.');
+  } else {
+    alert('❌ Error al borrar. Intentá desde el SQL Editor de Supabase.');
+  }
 }
 
 // ---- INIT ----
