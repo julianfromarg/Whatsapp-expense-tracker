@@ -162,6 +162,7 @@
     <button class="nav-tab" onclick="showPage('gastos')">Gastos</button>
     <button class="nav-tab" onclick="showPage('cargar')">+ Cargar</button>
     <button class="nav-tab" onclick="showPage('historial')">Historial WA</button>
+    <button class="nav-tab" onclick="showPage('config')">⚙ Config</button>
   </div>
   <div class="nav-right">
     <button class="btn-danger" onclick="clearData()" style="padding:5px 12px;border-radius:6px;cursor:pointer;font-family:var(--mono);font-size:11px;border:1px solid rgba(224,90,90,0.3);background:transparent;color:#e05a5a;transition:all 0.15s" onmouseover="this.style.background='rgba(224,90,90,0.1)'" onmouseout="this.style.background='transparent'">⚠ Borrar datos</button>
@@ -373,6 +374,38 @@
   </div>
 </div>
 
+<!-- CONFIG -->
+<div id="page-config" class="page">
+  <div style="max-width:900px">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
+
+      <!-- PROVEEDORES -->
+      <div class="card">
+        <div class="card-title">Proveedores <span id="provCount" style="color:var(--muted)"></span>
+          <button class="btn" onclick="agregarProveedor()" style="font-size:11px;padding:4px 10px">+ Nuevo</button>
+        </div>
+        <div id="listaProveedores"></div>
+      </div>
+
+      <!-- CATEGORIAS -->
+      <div class="card">
+        <div class="card-title">Categorías</div>
+        <div id="listaCategorias"></div>
+        <div style="margin-top:12px;font-size:11px;color:var(--muted)">Las categorías son fijas del sistema</div>
+      </div>
+
+      <!-- CENTROS DE COSTO -->
+      <div class="card" style="grid-column:1/-1">
+        <div class="card-title">Centros de costo</div>
+        <div id="listaCentros"></div>
+        <div style="margin-top:12px;font-size:11px;color:var(--muted)">Los centros de costo son fijos del sistema</div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+
 <script>
 const SUPABASE_URL = 'https://vccnehyvpextfodtvvxg.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZjY25laHl2cGV4dGZvZHR2dnhnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3ODY0NzcsImV4cCI6MjA4OTM2MjQ3N30.jkvf1KJUbDqaonEhhy2C5sURems5xM9umolab3CXxPs';
@@ -415,6 +448,7 @@ async function cargarTodo() {
   filtrados = [...allGastos];
   renderDashboard();
   renderTabla();
+  cargarConfig();
 }
 
 // ---- NAVEGACION ----
@@ -424,6 +458,7 @@ function showPage(name) {
   document.getElementById('page-' + name).classList.add('active');
   event.target.classList.add('active');
   if (name === 'gastos') renderTabla();
+  if (name === 'config') cargarConfig();
 }
 
 // ---- DASHBOARD ----
@@ -589,11 +624,17 @@ function renderTabla() {
           </select>
         </td>
         <td onclick="event.stopPropagation()">
-          <input value="${(g.proveedor||'').replace(/"/g,'&quot;')}" placeholder="—" onchange="actualizarCampo('${g.id}','proveedor',this.value)" style="background:transparent;border:none;border-bottom:1px dashed transparent;color:var(--muted);font-family:var(--mono);font-size:12px;width:100%;padding:2px 0" onmouseover="this.style.borderBottomColor='var(--border)'" onmouseout="this.style.borderBottomColor='transparent'">
+          <select onchange="actualizarCampo('${g.id}','proveedor',this.value)" style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;color:var(--muted);font-family:var(--mono);font-size:11px;padding:3px 6px;width:100%;cursor:pointer">
+            <option value="">—</option>
+            ${(window.proveedoresList||[]).map(p=>`<option ${p===g.proveedor?'selected':''}>${p}</option>`).join('')}
+          </select>
         </td>
         <td style="color:var(--muted);font-size:12px">${g.pagado_por || '—'}</td>
         <td class="monto-cell" style="text-align:right;white-space:nowrap">${g.moneda === 'USD' ? 'USD ' : '$'}${parseFloat(g.monto || 0).toLocaleString('es-AR')}</td>
-        <td style="text-align:right;white-space:nowrap"><span class="usd-cell">${g.moneda === 'USD' ? '—' : 'USD ' + Math.round((parseFloat(g.monto)||0)/tc).toLocaleString('es-AR')}</span>${imgIcon}</td>
+        <td style="text-align:right;white-space:nowrap">
+          <span class="usd-cell">${g.moneda === 'USD' ? '—' : 'USD ' + Math.round((parseFloat(g.monto)||0)/tc).toLocaleString('es-AR')}</span>${imgIcon}
+          <button onclick="event.stopPropagation();eliminarGasto('${g.id}')" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:14px;margin-left:8px;padding:2px;opacity:0.5;transition:opacity 0.15s" onmouseover="this.style.opacity='1';this.style.color='#e05a5a'" onmouseout="this.style.opacity='0.5';this.style.color='var(--muted)'" title="Eliminar gasto">🗑</button>
+        </td>
       </tr>`;
     }),
     `<tr style="background:rgba(200,181,96,0.04)">
@@ -862,6 +903,81 @@ function fmtFecha(f) {
   return `${d}/${m}/${y}`;
 }
 
+// ---- CONFIG / METADATA ----
+window.proveedoresList = [];
+
+async function cargarConfig() {
+  // Get unique proveedores from gastos
+  const provSet = new Set(allGastos.map(g => g.proveedor).filter(Boolean));
+  window.proveedoresList = [...provSet].sort();
+  renderConfig();
+}
+
+function renderConfig() {
+  const provs = window.proveedoresList;
+  document.getElementById('provCount').textContent = `(${provs.length})`;
+
+  document.getElementById('listaProveedores').innerHTML = provs.length
+    ? provs.map(p => `
+      <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border)">
+        <span style="flex:1;font-size:13px">${p}</span>
+        <button onclick="eliminarProveedor('${p.replace(/'/g,"\\'")}'')" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:13px;padding:2px 6px" title="Eliminar">✕</button>
+      </div>`).join('')
+    : '<div style="color:var(--muted);font-size:13px;padding:8px 0">Sin proveedores cargados</div>';
+
+  const cats = ['Materiales','Mano de obra','Honorarios','Servicios','Transporte','Impuestos/Tasas','Administrativo','Otro'];
+  document.getElementById('listaCategorias').innerHTML = cats.map(c => {
+    const count = allGastos.filter(g => g.categoria === c).length;
+    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
+      <span style="font-size:13px">${c}</span>
+      <span style="font-size:11px;color:var(--muted)">${count} gastos</span>
+    </div>`;
+  }).join('');
+
+  const centros = ['Infraestructura agua y cloacas','Infraestructura gas','Infraestructura electricidad','Albañilería / obra civil','Honorarios profesionales','Trámites / legal','Otros'];
+  document.getElementById('listaCentros').innerHTML = centros.map(c => {
+    const count = allGastos.filter(g => g.centro_costo === c).length;
+    const total = allGastos.filter(g => g.centro_costo === c).reduce((s,g) => s+(parseFloat(g.monto)||0), 0);
+    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
+      <span style="font-size:13px">${c}</span>
+      <span style="font-size:11px;color:var(--muted)">${count} gastos · $${Math.round(total/1000000*100)/100}M</span>
+    </div>`;
+  }).join('');
+}
+
+function agregarProveedor() {
+  const nombre = prompt('Nombre del nuevo proveedor:');
+  if (!nombre || !nombre.trim()) return;
+  const n = nombre.trim();
+  if (!window.proveedoresList.includes(n)) {
+    window.proveedoresList.push(n);
+    window.proveedoresList.sort();
+    renderConfig();
+  }
+}
+
+function eliminarProveedor(nombre) {
+  if (!confirm(`¿Eliminar "${nombre}" de la lista de proveedores?`)) return;
+  window.proveedoresList = window.proveedoresList.filter(p => p !== nombre);
+  renderConfig();
+}
+
+async function eliminarGasto(id) {
+  if (!confirm('¿Eliminar este gasto? Esta acción no se puede deshacer.')) return;
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/constructora_gastos?id=eq.${id}`, {
+    method: 'DELETE',
+    headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+  });
+  if (r.ok) {
+    allGastos = allGastos.filter(g => g.id !== id);
+    filtrados = filtrados.filter(g => g.id !== id);
+    renderTabla();
+    renderDashboard();
+  } else {
+    alert('Error al eliminar. Intentá de nuevo.');
+  }
+}
+
 // ---- CLEAR DATA ----
 async function clearData() {
   const confirm1 = confirm('⚠️ ¿Seguro que querés borrar TODOS los gastos?\nEsta acción no se puede deshacer.');
@@ -908,7 +1024,8 @@ function abrirDetalle(id) {
   document.getElementById('mProveedor').textContent = g.proveedor || '—';
   document.getElementById('mPagadoPor').textContent = g.pagado_por || '—';
   document.getElementById('mCat').textContent = g.categoria || '—';
-  document.getElementById('mFuente').textContent = g.fuente || '—';
+  const fuenteLabels = {'whatsapp-bot':'🤖 Bot de WhatsApp','webapp':'💻 Webapp','historial-whatsapp':'📋 Historial WhatsApp'};
+  document.getElementById('mFuente').textContent = fuenteLabels[g.fuente] || g.fuente || '—';
 
   const comp = document.getElementById('mComprobante');
   if (g.imagen_url) {
