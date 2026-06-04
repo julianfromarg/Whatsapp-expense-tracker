@@ -698,14 +698,20 @@ HISTORIAL:
 ${hTxtContent.slice(0, 80000)}`;
 
   try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
+    const res = await fetch(EDGE_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 6000, messages: [{ role: 'user', content: prompt }] })
+      body: JSON.stringify({
+        _mode: 'historial',
+        system: 'Extrae TODOS los gastos del historial de WhatsApp. Devuelve SOLO JSON valido sin backticks con formato: {"gastos":[{"fecha":"YYYY-MM-DD","monto":0,"moneda":"ARS","categoria":"Otro","centro_costo":"Otros","descripcion":"","pagado_por":"","proveedor":"","comprobante":""}]}. Categorias: Materiales, Mano de obra, Honorarios, Servicios, Transporte, Impuestos/Tasas, Administrativo, Otro. Centros de costo: Infraestructura agua y cloacas, Infraestructura gas, Infraestructura electricidad, Albanileria / obra civil, Honorarios profesionales, Tramites / legal, Otros. Para comprobante poner nombre del archivo adjunto SIN extension.',
+        messages: [{ role: 'user', content: prompt }]
+      })
     });
     const data = await res.json();
-    const raw = data.content?.[0]?.text || '{"gastos":[]}';
-    const parsed = JSON.parse(raw.replace(/```json|```/g, '').trim());
+    let parsed;
+    try {
+      parsed = data.gastos ? data : JSON.parse(JSON.stringify(data).replace(/```json|```/g,''));
+    } catch { parsed = { gastos: [] }; }
     window.hGastos = parsed.gastos || [];
     renderHistorialTabla();
   } catch(e) {
