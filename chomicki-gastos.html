@@ -324,15 +324,31 @@
 
 <!-- HISTORIAL -->
 <div id="page-historial" class="page">
-  <div class="historial-wrap">
-    <p style="color:var(--muted);margin-bottom:24px;line-height:1.7">Exportá el chat del grupo desde WhatsApp (sin archivos) y subí el .txt para extraer todos los gastos automáticamente.</p>
-    <div id="historialContent">
-      <div class="dropzone" id="dropTxt" onclick="document.getElementById('hFile').click()" style="margin-bottom:16px">
-        <div>📄 Subí el .txt exportado de WhatsApp</div>
-        <div style="font-size:11px;margin-top:6px;opacity:0.6">WhatsApp → Más opciones → Exportar chat → Sin archivos</div>
+  <div class="historial-wrap" style="max-width:900px">
+    <p style="color:var(--muted);margin-bottom:24px;line-height:1.7">Exportá el chat del grupo desde WhatsApp <strong style="color:var(--text)">con archivos</strong>, descomprimí el .zip y subí el .txt + todas las imágenes.</p>
+
+    <div id="historialUpload">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+        <div>
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:8px">1 · Historial .txt</div>
+          <div class="dropzone" id="dropTxt" onclick="document.getElementById('hFileTxt').click()">
+            <div id="txtLabel">📄 Subí el archivo .txt</div>
+          </div>
+          <input type="file" id="hFileTxt" accept=".txt" style="display:none" onchange="onTxtSelect(this)">
+        </div>
+        <div>
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:8px">2 · Imágenes (opcional)</div>
+          <div class="dropzone" id="dropImgs" onclick="document.getElementById('hFileImgs').click()">
+            <div id="imgsLabel">🖼 Seleccioná todas las fotos</div>
+            <div style="font-size:11px;margin-top:4px;opacity:0.5">Selección múltiple, nombres originales</div>
+          </div>
+          <input type="file" id="hFileImgs" accept="image/*,.pdf" multiple style="display:none" onchange="onImgsSelect(this)">
+        </div>
       </div>
-      <input type="file" id="hFile" accept=".txt" style="display:none" onchange="procesarHistorial(this)">
+      <button class="btn primary" id="btnProcesar" disabled onclick="procesarHistorial()" style="width:100%">Extraer gastos con Claude →</button>
     </div>
+
+    <div id="historialContent"></div>
   </div>
 </div>
 
@@ -635,22 +651,51 @@ async function guardarGasto() {
 }
 
 // ---- HISTORIAL ----
-async function procesarHistorial(input) {
+let hTxtContent = '';
+let hImgMap = {};
+
+function onTxtSelect(input) {
   const file = input.files[0];
   if (!file) return;
-  const txt = await file.text();
+  const r = new FileReader();
+  r.onload = e => {
+    hTxtContent = e.target.result;
+    document.getElementById('txtLabel').textContent = '✅ ' + file.name;
+    document.getElementById('dropTxt').classList.add('has-file');
+    checkHistorialReady();
+  };
+  r.readAsText(file);
+}
+
+function onImgsSelect(input) {
+  const files = Array.from(input.files);
+  hImgMap = {};
+  files.forEach(f => {
+    const key = f.name.replace(/\.[^.]+$/, '');
+    hImgMap[key] = f;
+  });
+  document.getElementById('imgsLabel').textContent = `✅ ${files.length} imágenes cargadas`;
+  document.getElementById('dropImgs').classList.add('has-file');
+}
+
+function checkHistorialReady() {
+  document.getElementById('btnProcesar').disabled = !hTxtContent;
+}
+
+async function procesarHistorial() {
   const wrap = document.getElementById('historialContent');
   wrap.innerHTML = '<div class="loading"><div class="spinner"></div><br>Claude está analizando el historial...</div>';
+  document.getElementById('btnProcesar').disabled = true;
 
   const prompt = `Extraé TODOS los gastos del siguiente historial de WhatsApp de un grupo de obra. Cada gasto tiene una imagen adjunta seguida de texto descriptivo. Devolvé SOLO JSON válido sin backticks:
 {"gastos":[{"fecha":"YYYY-MM-DD","monto":0,"moneda":"ARS","categoria":"Otro","centro_costo":"Otros","descripcion":"","pagado_por":"","proveedor":"","comprobante":""}]}
 
 Categorías: Materiales, Mano de obra, Honorarios, Servicios, Transporte, Impuestos/Tasas, Administrativo, Otro
 Centros de costo: "Infraestructura agua y cloacas", "Infraestructura gas", "Infraestructura electricidad", "Albañilería / obra civil", "Honorarios profesionales", "Trámites / legal", "Otros"
-Para comprobante: poner el nombre del archivo adjunto sin extensión (ej: IMG-20251117-WA0010)
+Para comprobante: nombre del archivo adjunto SIN extensión (ej: IMG-20251117-WA0010). Si no hay adjunto, dejar vacío.
 
 HISTORIAL:
-${txt.slice(0, 80000)}`;
+${hTxtContent.slice(0, 80000)}`;
 
   try {
     const res = await fetch('https://api.anthropic.com/v1/messages', {
@@ -661,55 +706,97 @@ ${txt.slice(0, 80000)}`;
     const data = await res.json();
     const raw = data.content?.[0]?.text || '{"gastos":[]}';
     const parsed = JSON.parse(raw.replace(/```json|```/g, '').trim());
-    renderHistorialTabla(parsed.gastos || []);
+    window.hGastos = parsed.gastos || [];
+    renderHistorialTabla();
   } catch(e) {
     wrap.innerHTML = `<div style="color:var(--red);padding:16px">Error: ${e.message}</div>`;
+    document.getElementById('btnProcesar').disabled = false;
   }
 }
 
-function renderHistorialTabla(gastos) {
+function renderHistorialTabla() {
+  const gastos = window.hGastos;
   const wrap = document.getElementById('historialContent');
-  if (!gastos.length) { wrap.innerHTML = '<div style="color:var(--muted)">No se encontraron gastos.</div>'; return; }
+  if (!gastos.length) { wrap.innerHTML = '<div style="color:var(--muted);padding:16px 0">No se encontraron gastos.</div>'; return; }
+
   const total = gastos.reduce((s,g) => s+(parseFloat(g.monto)||0), 0);
+  const conImg = gastos.filter(g => g.comprobante && hImgMap[g.comprobante]).length;
+  const sinImg = gastos.filter(g => g.comprobante && !hImgMap[g.comprobante]).length;
+
   wrap.innerHTML = `
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
-      <div style="color:var(--muted);font-size:12px">${gastos.length} gastos encontrados · Total $${Math.round(total).toLocaleString('es-AR')}</div>
-      <button class="btn primary" onclick="cargarHistorialASupabase()">Cargar todos al dashboard →</button>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin:20px 0 12px;flex-wrap:wrap;gap:10px">
+      <div style="font-size:12px;color:var(--muted);line-height:1.8">
+        <span style="color:var(--text)">${gastos.length}</span> gastos · Total <span style="color:var(--accent)">$${Math.round(total).toLocaleString('es-AR')}</span><br>
+        ${conImg > 0 ? `<span style="color:var(--green)">✓ ${conImg} con imagen</span>` : ''}
+        ${sinImg > 0 ? ` · <span style="color:var(--muted)">${sinImg} imagen pendiente</span>` : ''}
+      </div>
+      <button class="btn primary" onclick="cargarHistorialASupabase(this)">Subir imágenes y cargar al dashboard →</button>
     </div>
-    <div style="overflow-x:auto;max-height:500px;overflow-y:auto">
-    <table id="hTabla">
+    <div style="overflow-x:auto;max-height:520px;overflow-y:auto;border:1px solid var(--border);border-radius:8px">
+    <table>
       <thead><tr>
-        <th>Fecha</th><th>Monto</th><th>Centro de costo</th><th>Descripción</th><th>Proveedor</th>
+        <th style="width:36px"></th>
+        <th>Fecha</th><th>Monto</th><th>Centro de costo</th><th>Descripción</th><th>Proveedor</th><th style="width:28px"></th>
       </tr></thead>
-      <tbody>${gastos.map((g,i) => `<tr data-idx="${i}">
-        <td><input value="${g.fecha||''}" style="width:110px" onchange="hGastos[${i}].fecha=this.value"></td>
-        <td><input type="number" value="${g.monto||''}" style="width:100px" onchange="hGastos[${i}].monto=this.value"></td>
-        <td><select onchange="hGastos[${i}].centro_costo=this.value" style="width:180px">
-          ${['Infraestructura agua y cloacas','Infraestructura gas','Infraestructura electricidad','Albañilería / obra civil','Honorarios profesionales','Trámites / legal','Otros'].map(c=>`<option ${c===g.centro_costo?'selected':''}>${c}</option>`).join('')}
-        </select></td>
-        <td><input value="${g.descripcion||''}" style="width:200px" onchange="hGastos[${i}].descripcion=this.value"></td>
-        <td><input value="${g.proveedor||''}" style="width:130px" onchange="hGastos[${i}].proveedor=this.value"></td>
-      </tr>`).join('')}</tbody>
+      <tbody>${gastos.map((g,i) => {
+        const imgFile = g.comprobante && hImgMap[g.comprobante];
+        const thumb = imgFile
+          ? `<img src="${URL.createObjectURL(imgFile)}" style="width:28px;height:28px;object-fit:cover;border-radius:4px;cursor:pointer;border:1px solid var(--border)" onclick="window.open('${URL.createObjectURL(imgFile)}')">`
+          : g.comprobante
+            ? `<div style="width:28px;height:28px;border-radius:4px;border:1px dashed var(--border);display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--muted)" title="${g.comprobante}">?</div>`
+            : `<div style="width:28px;height:28px"></div>`;
+        return `<tr id="hrow-${i}">
+          <td style="padding:4px 6px">${thumb}</td>
+          <td><input value="${g.fecha||''}" style="width:105px;background:transparent;border:none;border-bottom:1px dashed var(--border);color:var(--text);font-family:var(--mono);font-size:12px;padding:2px 4px" onchange="hGastos[${i}].fecha=this.value"></td>
+          <td><input type="number" value="${g.monto||''}" style="width:95px;background:transparent;border:none;border-bottom:1px dashed var(--border);color:var(--accent);font-family:var(--mono);font-size:12px;padding:2px 4px" onchange="hGastos[${i}].monto=this.value"></td>
+          <td><select onchange="hGastos[${i}].centro_costo=this.value" style="width:175px;background:var(--bg2);border:1px solid var(--border);color:var(--text);font-family:var(--mono);font-size:11px;padding:3px 6px;border-radius:4px">
+            ${['Infraestructura agua y cloacas','Infraestructura gas','Infraestructura electricidad','Albañilería / obra civil','Honorarios profesionales','Trámites / legal','Otros'].map(c=>`<option ${c===g.centro_costo?'selected':''}>${c}</option>`).join('')}
+          </select></td>
+          <td><input value="${(g.descripcion||'').replace(/"/g,"'")}" style="width:190px;background:transparent;border:none;border-bottom:1px dashed var(--border);color:var(--text);font-family:var(--mono);font-size:12px;padding:2px 4px" onchange="hGastos[${i}].descripcion=this.value"></td>
+          <td><input value="${g.proveedor||''}" style="width:120px;background:transparent;border:none;border-bottom:1px dashed var(--border);color:var(--muted);font-family:var(--mono);font-size:12px;padding:2px 4px" onchange="hGastos[${i}].proveedor=this.value"></td>
+          <td><button onclick="hGastos[${i}]._skip=!hGastos[${i}]._skip;this.closest('tr').style.opacity=hGastos[${i}]._skip?'0.3':'1'" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:14px" title="Omitir">✕</button></td>
+        </tr>`;
+      }).join('')}</tbody>
     </table></div>`;
-  window.hGastos = gastos;
 }
 
-async function cargarHistorialASupabase() {
-  const btn = event.target;
-  btn.textContent = 'Cargando...'; btn.disabled = true;
-  let ok = 0;
-  for (const g of window.hGastos) {
+async function cargarHistorialASupabase(btn) {
+  const gastos = (window.hGastos || []).filter(g => !g._skip);
+  if (!gastos.length) return;
+  btn.textContent = 'Procesando...'; btn.disabled = true;
+
+  let ok = 0, imgOk = 0;
+  for (let i = 0; i < gastos.length; i++) {
+    const g = gastos[i];
+    btn.textContent = `Cargando ${i+1}/${gastos.length}...`;
+
+    let imagen_url = null;
+    const imgFile = g.comprobante && hImgMap[g.comprobante];
+    if (imgFile) {
+      const ext = imgFile.name.split('.').pop();
+      const fname = `historial-${g.comprobante}.${ext}`;
+      try {
+        const up = await fetch(`${SUPABASE_URL}/storage/v1/object/constructora-comprobantes/${fname}`, {
+          method: 'POST',
+          headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': imgFile.type },
+          body: imgFile
+        });
+        if (up.ok) { imagen_url = `${SUPABASE_URL}/storage/v1/object/public/constructora-comprobantes/${fname}`; imgOk++; }
+      } catch {}
+    }
+
     try {
       await fetch(`${SUPABASE_URL}/rest/v1/constructora_gastos`, {
         method: 'POST',
         headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-        body: JSON.stringify({ ...g, monto: parseFloat(g.monto)||0, fuente: 'historial-whatsapp' })
+        body: JSON.stringify({ ...g, monto: parseFloat(g.monto)||0, imagen_url, fuente: 'historial-whatsapp' })
       });
       ok++;
     } catch {}
-    await new Promise(r => setTimeout(r, 80));
+    await new Promise(r => setTimeout(r, 100));
   }
-  btn.textContent = `✅ ${ok} gastos cargados`;
+
+  btn.textContent = `✅ ${ok} gastos · ${imgOk} imágenes subidas`;
   allGastos = await fetchGastos();
   filtrados = [...allGastos];
   renderDashboard();
