@@ -193,8 +193,28 @@
 <!-- GASTOS -->
 <div id="page-gastos" class="page">
   <div class="filters">
-    <input class="filter-input" type="date" id="fDesde" placeholder="Desde" onchange="aplicarFiltros()">
-    <input class="filter-input" type="date" id="fHasta" placeholder="Hasta" onchange="aplicarFiltros()">
+    <select class="filter-input" id="fAnio" onchange="aplicarFiltros()" style="width:90px">
+      <option value="">Año</option>
+      <option>2025</option>
+      <option>2026</option>
+      <option>2027</option>
+    </select>
+    <select class="filter-input" id="fMes" onchange="aplicarFiltros()" style="width:110px">
+      <option value="">Mes</option>
+      <option value="01">Enero</option>
+      <option value="02">Febrero</option>
+      <option value="03">Marzo</option>
+      <option value="04">Abril</option>
+      <option value="05">Mayo</option>
+      <option value="06">Junio</option>
+      <option value="07">Julio</option>
+      <option value="08">Agosto</option>
+      <option value="09">Septiembre</option>
+      <option value="10">Octubre</option>
+      <option value="11">Noviembre</option>
+      <option value="12">Diciembre</option>
+    </select>
+    <input class="filter-input" type="number" id="fDia" placeholder="Día" oninput="aplicarFiltros()" style="width:70px" min="1" max="31">
     <select class="filter-input" id="fCentro" onchange="aplicarFiltros()">
       <option value="">Todos los centros</option>
       <option>Infraestructura agua y cloacas</option>
@@ -216,7 +236,7 @@
       <option>Administrativo</option>
       <option>Otro</option>
     </select>
-    <input class="filter-input" type="text" id="fProveedor" placeholder="Proveedor..." oninput="aplicarFiltros()" style="width:160px">
+    <input class="filter-input" type="text" id="fProveedor" placeholder="Proveedor..." oninput="aplicarFiltros()" style="width:150px">
     <button class="btn-clear" onclick="limpiarFiltros()">✕ Limpiar</button>
     <span id="filtroCount" style="color:var(--muted);font-size:11px;margin-left:4px"></span>
   </div>
@@ -355,7 +375,7 @@
 
 <script>
 const SUPABASE_URL = 'https://vccnehyvpextfodtvvxg.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZjY25laHl2cGV4dGZvZHR2dnhnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3ODY0NzcsImV4cCI6MjA4OTM2MjQ3N30.jkvf1KJUbDqaonEhhy2C5sURems5xM9umolab3CXxPs';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZjY25laHl2cGV4dGZvZHR2dnhnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU5NTM5NzAsImV4cCI6MjA2MTUyOTk3MH0.LbkMMiJDIiLjgZy3s4iqhf_9FxzjvRD8clRTFX4h_Po';
 const EDGE_URL = 'https://vccnehyvpextfodtvvxg.supabase.co/functions/v1/quick-processor';
 
 let allGastos = [];
@@ -485,15 +505,22 @@ function renderDashboard() {
 
 // ---- TABLA ----
 function aplicarFiltros() {
-  const desde = document.getElementById('fDesde').value;
-  const hasta = document.getElementById('fHasta').value;
+  const anio = document.getElementById('fAnio').value;
+  const mes = document.getElementById('fMes').value;
+  const dia = document.getElementById('fDia').value;
   const centro = document.getElementById('fCentro').value;
   const cat = document.getElementById('fCat').value;
   const prov = document.getElementById('fProveedor').value.toLowerCase();
 
   filtrados = allGastos.filter(g => {
-    if (desde && g.fecha < desde) return false;
-    if (hasta && g.fecha > hasta) return false;
+    const fecha = g.fecha || '';
+    if (anio && !fecha.startsWith(anio)) return false;
+    if (mes && fecha.substring(5,7) !== mes) return false;
+    if (dia) {
+      const d = parseInt(dia);
+      const gd = parseInt(fecha.substring(8,10));
+      if (d !== gd) return false;
+    }
     if (centro && g.centro_costo !== centro) return false;
     if (cat && g.categoria !== cat) return false;
     if (prov && !(g.proveedor || '').toLowerCase().includes(prov) && !(g.descripcion || '').toLowerCase().includes(prov)) return false;
@@ -506,8 +533,8 @@ function aplicarFiltros() {
 }
 
 function limpiarFiltros() {
-  ['fDesde','fHasta','fProveedor'].forEach(id => document.getElementById(id).value = '');
-  ['fCentro','fCat'].forEach(id => document.getElementById(id).selectedIndex = 0);
+  ['fDia','fProveedor'].forEach(id => document.getElementById(id).value = '');
+  ['fAnio','fMes','fCentro','fCat'].forEach(id => document.getElementById(id).selectedIndex = 0);
   filtrados = [...allGastos];
   currentPage = 1;
   document.getElementById('filtroCount').textContent = '';
@@ -537,19 +564,31 @@ function renderTabla() {
   const totalFilt = filtrados.reduce((s, g) => s + (parseFloat(g.monto) || 0), 0);
 
   const catClass = { Materiales: 'pill-mat', 'Mano de obra': 'pill-mo', Honorarios: 'pill-hon' };
+  const centros = ['Infraestructura agua y cloacas','Infraestructura gas','Infraestructura electricidad','Albañilería / obra civil','Honorarios profesionales','Trámites / legal','Otros'];
 
   document.getElementById('tablaBody').innerHTML = page.length ? [
-    ...page.map(g => `
-    <tr>
-      <td>${fmtFecha(g.fecha)}</td>
-      <td style="max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${g.descripcion || '—'}</td>
-      <td style="max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--muted)">${g.centro_costo || '—'}</td>
-      <td><span class="pill ${catClass[g.categoria] || 'pill-otro'}">${g.categoria || '—'}</span></td>
-      <td style="color:var(--muted)">${g.proveedor || '—'}</td>
-      <td style="color:var(--muted)">${g.pagado_por || '—'}</td>
-      <td class="monto-cell" style="text-align:right">${g.moneda === 'USD' ? 'USD ' : '$'}${parseFloat(g.monto || 0).toLocaleString('es-AR')}</td>
-      <td class="usd-cell" style="text-align:right">${g.moneda === 'USD' ? '—' : 'USD ' + Math.round((parseFloat(g.monto)||0)/tc).toLocaleString('es-AR')}</td>
-    </tr>`),
+    ...page.map(g => {
+      const centroOpts = centros.map(c => `<option ${c===g.centro_costo?'selected':''}>${c}</option>`).join('');
+      const imgBtn = g.imagen_url
+        ? `<span style="cursor:pointer;font-size:16px" onclick="window.open('${g.imagen_url}','_blank')" title="Ver comprobante">📎</span>`
+        : g.comprobante ? `<span style="font-size:13px;color:var(--muted)" title="${g.comprobante}">·</span>` : '';
+      return `<tr>
+        <td>${fmtFecha(g.fecha)}</td>
+        <td style="max-width:240px">
+          <div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:help" title="${(g.descripcion||'').replace(/"/g,'&quot;')}">${g.descripcion || '—'}</div>
+        </td>
+        <td>
+          <select onchange="actualizarCentro('${g.id}',this.value)" style="background:transparent;border:none;border-bottom:1px dashed var(--border);color:var(--muted);font-family:var(--mono);font-size:11px;padding:2px 2px;width:100%;cursor:pointer">
+            ${centroOpts}
+          </select>
+        </td>
+        <td><span class="pill ${catClass[g.categoria] || 'pill-otro'}">${g.categoria || '—'}</span></td>
+        <td style="color:var(--muted)">${g.proveedor || '—'}</td>
+        <td style="color:var(--muted)">${g.pagado_por || '—'}</td>
+        <td class="monto-cell" style="text-align:right">${g.moneda === 'USD' ? 'USD ' : '$'}${parseFloat(g.monto || 0).toLocaleString('es-AR')}</td>
+        <td style="text-align:right">${g.moneda === 'USD' ? '—' : '<span class="usd-cell">USD ' + Math.round((parseFloat(g.monto)||0)/tc).toLocaleString('es-AR') + '</span>'} ${imgBtn}</td>
+      </tr>`;
+    }),
     `<tr style="background:rgba(200,181,96,0.04)">
       <td colspan="6" style="color:var(--muted);font-size:11px">Total filtrado</td>
       <td class="monto-cell" style="text-align:right">$${Math.round(totalFilt).toLocaleString('es-AR')}</td>
@@ -837,6 +876,17 @@ async function clearData() {
   } else {
     alert('❌ Error al borrar. Intentá desde el SQL Editor de Supabase.');
   }
+}
+
+// ---- EDITAR CENTRO COSTO ----
+async function actualizarCentro(id, valor) {
+  await fetch(`${SUPABASE_URL}/rest/v1/constructora_gastos?id=eq.${id}`, {
+    method: 'PATCH',
+    headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+    body: JSON.stringify({ centro_costo: valor })
+  });
+  const g = allGastos.find(x => x.id === id);
+  if (g) g.centro_costo = valor;
 }
 
 // ---- INIT ----
