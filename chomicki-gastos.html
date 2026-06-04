@@ -630,7 +630,9 @@ function renderTabla() {
           </select>
         </td>
         <td style="color:var(--muted);font-size:12px">${g.pagado_por || '—'}</td>
-        <td class="monto-cell" style="text-align:right;white-space:nowrap">${g.moneda === 'USD' ? 'USD ' : '$'}${parseFloat(g.monto || 0).toLocaleString('es-AR')}</td>
+        <td style="text-align:right;white-space:nowrap" onclick="event.stopPropagation()">
+          <span style="color:var(--muted);font-size:11px;margin-right:2px">${g.moneda === 'USD' ? 'USD' : '$'}</span><input type="number" value="${parseFloat(g.monto||0)}" onchange="actualizarCampo('${g.id}','monto',parseFloat(this.value))" style="background:transparent;border:none;border-bottom:1px dashed transparent;color:var(--accent);font-family:var(--mono);font-size:13px;font-weight:500;width:110px;text-align:right;padding:2px 0" onmouseover="this.style.borderBottomColor='var(--border)'" onmouseout="this.style.borderBottomColor='transparent'">
+        </td>
         <td style="text-align:right;white-space:nowrap">
           <span class="usd-cell">${g.moneda === 'USD' ? '—' : 'USD ' + Math.round((parseFloat(g.monto)||0)/tc).toLocaleString('es-AR')}</span>${imgIcon}
           <button onclick="event.stopPropagation();eliminarGasto('${g.id}')" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:14px;margin-left:8px;padding:2px;opacity:0.5;transition:opacity 0.15s" onmouseover="this.style.opacity='1';this.style.color='#e05a5a'" onmouseout="this.style.opacity='0.5';this.style.color='var(--muted)'" title="Eliminar gasto">🗑</button>
