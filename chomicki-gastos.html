@@ -3,340 +3,729 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Chomicki — Registro de Gastos</title>
+<title>Constructora — Dashboard de Gastos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;1,9..144,300&display=swap" rel="stylesheet">
 <style>
+  :root {
+    --bg: #0f0f0d;
+    --bg2: #181815;
+    --bg3: #1f1f1b;
+    --border: rgba(255,255,255,0.08);
+    --border2: rgba(255,255,255,0.14);
+    --text: #f0ede6;
+    --muted: #888882;
+    --accent: #c8b560;
+    --accent2: #e8d080;
+    --green: #5db87a;
+    --red: #e05a5a;
+    --blue: #6ab0d4;
+    --mono: 'DM Mono', monospace;
+    --serif: 'Fraunces', serif;
+  }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f0; min-height: 100vh; padding: 2rem 1rem; color: #1a1a1a; }
-  .container { max-width: 560px; margin: 0 auto; }
-  .header { margin-bottom: 2rem; }
-  .header h1 { font-size: 20px; font-weight: 600; color: #1a1a1a; }
-  .header p { font-size: 13px; color: #888; margin-top: 3px; }
-  .card { background: white; border-radius: 16px; padding: 1.5rem; margin-bottom: 1rem; border: 1px solid #e8e8e8; }
-  .section-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; color: #aaa; margin-bottom: 10px; }
-  .drop-zone { border: 1.5px dashed #ddd; border-radius: 12px; padding: 1.5rem; text-align: center; cursor: pointer; transition: all 0.15s; background: #fafafa; }
-  .drop-zone:hover { border-color: #bbb; background: #f5f5f5; }
-  .drop-zone.has-file { border-color: #22c55e; border-style: solid; background: #f0fdf4; }
-  .drop-icon { font-size: 28px; margin-bottom: 8px; }
-  .drop-text { font-size: 14px; color: #666; }
-  .drop-sub { font-size: 12px; color: #bbb; margin-top: 4px; }
-  .preview-img { max-width: 100%; max-height: 160px; border-radius: 8px; object-fit: contain; display: block; margin: 0 auto; }
-  .file-name { font-size: 12px; color: #22c55e; font-weight: 500; margin-top: 8px; }
-  textarea { width: 100%; border: 1.5px dashed #ddd; border-radius: 12px; padding: 12px 14px; font-size: 14px; font-family: inherit; color: #1a1a1a; background: #fafafa; resize: vertical; min-height: 90px; outline: none; transition: border-color 0.15s; }
-  textarea:focus { border-color: #999; border-style: solid; background: white; }
-  textarea.has-content { border-style: solid; border-color: #22c55e; background: white; }
-  .hint { text-align: center; font-size: 12px; color: #bbb; margin-top: 8px; min-height: 18px; }
-  .parse-btn { width: 100%; padding: 13px; background: #1a1a1a; color: white; border: none; border-radius: 12px; font-size: 15px; font-weight: 500; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: background 0.15s; margin-top: 1rem; }
-  .parse-btn:hover:not(:disabled) { background: #333; }
-  .parse-btn:disabled { background: #ccc; cursor: not-allowed; }
-  .result-card { background: white; border-radius: 16px; border: 1px solid #e8e8e8; padding: 1.5rem; margin-top: 1rem; }
-  .result-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
-  .result-title { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; color: #aaa; }
-  .cat-badge { padding: 4px 12px; background: #eff6ff; color: #1d4ed8; border-radius: 999px; font-size: 12px; font-weight: 500; }
-  .fields { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-  .field { background: #f8f8f8; border-radius: 10px; padding: 10px 12px; position: relative; }
-  .field.full { grid-column: 1 / -1; }
-  .field.inferred { background: #fffbeb; }
-  .field.missing { background: #fff1f1; }
-  .flabel { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #bbb; margin-bottom: 3px; display: flex; align-items: center; gap: 5px; }
-  .fval { font-size: 15px; font-weight: 500; color: #1a1a1a; }
-  .fval.big { font-size: 22px; }
-  .fval.muted { color: #bbb; font-weight: 400; font-size: 13px; }
-  .fval input, .fval select { width: 100%; border: none; background: transparent; font-size: 15px; font-weight: 500; color: #1a1a1a; font-family: inherit; outline: none; border-bottom: 1.5px solid #ddd; padding-bottom: 2px; }
-  .fval.big input { font-size: 20px; }
-  .src-tag { font-size: 9px; font-weight: 600; padding: 2px 6px; border-radius: 999px; position: absolute; top: 8px; right: 8px; }
-  .src-receipt { background: #dbeafe; color: #1d4ed8; }
-  .src-msg { background: #dcfce7; color: #15803d; }
-  .src-inferred { background: #fef9c3; color: #854d0e; }
-  .src-missing { background: #fee2e2; color: #b91c1c; }
-  .legend { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
-  .leg { display: flex; align-items: center; gap: 4px; font-size: 11px; color: #999; }
-  .leg-dot { width: 8px; height: 8px; border-radius: 2px; }
-  .agent-note { margin-top: 12px; padding: 10px 14px; background: #fffbeb; border-radius: 10px; font-size: 13px; color: #92400e; display: flex; gap: 8px; }
-  .actions { display: flex; gap: 8px; margin-top: 1rem; }
-  .btn-add { flex: 1; padding: 11px; background: #f0fdf4; color: #15803d; border: 1.5px solid #bbf7d0; border-radius: 12px; font-size: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: background 0.15s; }
-  .btn-add:hover:not(:disabled) { background: #dcfce7; }
-  .btn-add:disabled { opacity: 0.5; cursor: not-allowed; }
-  .btn-edit { padding: 11px 16px; background: white; border: 1px solid #e8e8e8; border-radius: 12px; font-size: 14px; color: #666; cursor: pointer; display: flex; align-items: center; gap: 6px; }
-  .btn-edit:hover { background: #f8f8f8; }
-  .btn-new { width: 100%; margin-top: 10px; padding: 10px; background: white; border: 1px solid #e8e8e8; border-radius: 12px; font-size: 13px; color: #999; cursor: pointer; }
-  .btn-new:hover { background: #f8f8f8; }
-  .success { padding: 16px; background: #f0fdf4; border-radius: 12px; border: 1px solid #bbf7d0; display: flex; align-items: center; gap: 12px; }
-  .success-icon { font-size: 24px; }
-  .success-title { font-size: 15px; font-weight: 600; color: #15803d; }
-  .success-sub { font-size: 13px; color: #4ade80; margin-top: 2px; }
-  .error { padding: 12px 14px; background: #fff1f1; border-radius: 10px; color: #b91c1c; font-size: 13px; display: flex; gap: 8px; align-items: center; margin-top: 1rem; }
-  .spinner { width: 18px; height: 18px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.7s linear infinite; }
+  body { background: var(--bg); color: var(--text); font-family: var(--mono); font-size: 13px; min-height: 100vh; }
+
+  /* NAV */
+  nav { display: flex; align-items: center; justify-content: space-between; padding: 16px 32px; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--bg); z-index: 100; }
+  .nav-brand { font-family: var(--serif); font-size: 18px; font-weight: 300; color: var(--accent); letter-spacing: -0.02em; }
+  .nav-brand span { font-style: italic; }
+  .nav-tabs { display: flex; gap: 4px; }
+  .nav-tab { padding: 6px 14px; border-radius: 6px; cursor: pointer; color: var(--muted); border: none; background: none; font-family: var(--mono); font-size: 12px; transition: all 0.15s; }
+  .nav-tab:hover { color: var(--text); background: var(--bg3); }
+  .nav-tab.active { color: var(--accent); background: rgba(200,181,96,0.1); }
+  .nav-right { display: flex; align-items: center; gap: 12px; }
+  .tc-badge { font-size: 11px; color: var(--muted); padding: 4px 10px; border: 1px solid var(--border); border-radius: 20px; cursor: pointer; transition: border-color 0.15s; }
+  .tc-badge:hover { border-color: var(--border2); color: var(--text); }
+  .tc-badge span { color: var(--accent); font-weight: 500; }
+
+  /* LAYOUT */
+  .page { display: none; padding: 32px; max-width: 1400px; margin: 0 auto; }
+  .page.active { display: block; }
+
+  /* DASHBOARD */
+  .metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 28px; }
+  .metric { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 20px 22px; position: relative; overflow: hidden; transition: border-color 0.15s; }
+  .metric:hover { border-color: var(--border2); }
+  .metric::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: var(--accent); opacity: 0; transition: opacity 0.15s; }
+  .metric:hover::before { opacity: 1; }
+  .metric-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 10px; }
+  .metric-value { font-family: var(--serif); font-size: 28px; font-weight: 300; color: var(--text); line-height: 1; }
+  .metric-sub { font-size: 11px; color: var(--muted); margin-top: 6px; }
+  .metric-sub.up { color: var(--green); }
+  .metric-sub.down { color: var(--red); }
+
+  .dash-grid { display: grid; grid-template-columns: 1fr 320px; gap: 20px; margin-bottom: 28px; }
+  .card { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 20px; }
+  .card-title { font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; }
+
+  /* BARRAS */
+  .bar-item { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .bar-label { width: 180px; font-size: 12px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-shrink: 0; }
+  .bar-track { flex: 1; height: 6px; background: var(--bg3); border-radius: 3px; overflow: hidden; }
+  .bar-fill { height: 100%; background: var(--accent); border-radius: 3px; transition: width 0.6s cubic-bezier(0.4,0,0.2,1); }
+  .bar-amt { width: 100px; text-align: right; font-size: 11px; color: var(--muted); flex-shrink: 0; }
+
+  /* DONUT */
+  .donut-wrap { display: flex; align-items: center; gap: 20px; }
+  svg.donut { flex-shrink: 0; }
+  .donut-legend { flex: 1; }
+  .legend-item { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 11px; }
+  .legend-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+  /* ULTIMOS GASTOS */
+  .recent-item { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+  .recent-item:last-child { border-bottom: none; }
+  .recent-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); flex-shrink: 0; }
+  .recent-info { flex: 1; min-width: 0; }
+  .recent-desc { font-size: 12px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .recent-meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .recent-monto { font-size: 13px; font-weight: 500; color: var(--accent); white-space: nowrap; }
+
+  /* TABLA */
+  .filters { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
+  .filter-input { background: var(--bg2); border: 1px solid var(--border); border-radius: 6px; padding: 7px 12px; color: var(--text); font-family: var(--mono); font-size: 12px; outline: none; transition: border-color 0.15s; }
+  .filter-input:focus { border-color: var(--accent); }
+  .filter-input::placeholder { color: var(--muted); }
+  select.filter-input option { background: var(--bg2); }
+  .btn { padding: 7px 16px; border-radius: 6px; cursor: pointer; font-family: var(--mono); font-size: 12px; border: 1px solid var(--border); background: transparent; color: var(--muted); transition: all 0.15s; }
+  .btn:hover { border-color: var(--border2); color: var(--text); }
+  .btn.primary { background: var(--accent); color: var(--bg); border-color: var(--accent); font-weight: 500; }
+  .btn.primary:hover { background: var(--accent2); border-color: var(--accent2); }
+  .btn-clear { padding: 7px 12px; border-radius: 6px; cursor: pointer; font-family: var(--mono); font-size: 11px; border: 1px solid var(--border); background: transparent; color: var(--muted); transition: all 0.15s; }
+  .btn-clear:hover { color: var(--red); border-color: var(--red); }
+
+  table { width: 100%; border-collapse: collapse; }
+  th { text-align: left; padding: 8px 10px; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); border-bottom: 1px solid var(--border); white-space: nowrap; cursor: pointer; user-select: none; }
+  th:hover { color: var(--text); }
+  th .sort-arrow { opacity: 0.3; margin-left: 4px; }
+  th.sorted .sort-arrow { opacity: 1; color: var(--accent); }
+  td { padding: 9px 10px; border-bottom: 1px solid var(--border); font-size: 12px; vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(255,255,255,0.02); }
+  .pill { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 500; }
+  .pill-mat { background: rgba(90,160,210,0.15); color: var(--blue); }
+  .pill-mo { background: rgba(93,184,122,0.15); color: var(--green); }
+  .pill-hon { background: rgba(200,181,96,0.15); color: var(--accent); }
+  .pill-otro { background: rgba(255,255,255,0.07); color: var(--muted); }
+  .monto-cell { font-weight: 500; color: var(--accent); font-family: var(--mono); }
+  .usd-cell { font-size: 11px; color: var(--muted); }
+  .pagination { display: flex; align-items: center; gap: 8px; margin-top: 16px; justify-content: flex-end; font-size: 12px; color: var(--muted); }
+  .page-btn { padding: 4px 10px; border-radius: 4px; cursor: pointer; border: 1px solid var(--border); background: transparent; color: var(--muted); font-family: var(--mono); font-size: 12px; }
+  .page-btn:hover { border-color: var(--border2); color: var(--text); }
+  .page-btn.active { border-color: var(--accent); color: var(--accent); }
+
+  /* CARGA */
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+  .form-group { display: flex; flex-direction: column; gap: 6px; }
+  .form-group.full { grid-column: 1 / -1; }
+  label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+  input, select, textarea { background: var(--bg2); border: 1px solid var(--border); border-radius: 6px; padding: 9px 12px; color: var(--text); font-family: var(--mono); font-size: 13px; outline: none; transition: border-color 0.15s; width: 100%; }
+  input:focus, select:focus, textarea:focus { border-color: var(--accent); }
+  select option { background: var(--bg2); }
+  textarea { resize: vertical; min-height: 70px; }
+  .dropzone { border: 1px dashed var(--border2); border-radius: 8px; padding: 32px; text-align: center; cursor: pointer; transition: all 0.15s; color: var(--muted); }
+  .dropzone:hover, .dropzone.drag { border-color: var(--accent); color: var(--accent); background: rgba(200,181,96,0.04); }
+  .dropzone.has-file { border-color: var(--green); color: var(--green); }
+  .form-actions { display: flex; gap: 10px; justify-content: flex-end; padding-top: 16px; border-top: 1px solid var(--border); }
+  .success-msg { background: rgba(93,184,122,0.1); border: 1px solid rgba(93,184,122,0.3); border-radius: 8px; padding: 14px 18px; color: var(--green); font-size: 13px; margin-bottom: 16px; display: none; }
+  .error-msg { background: rgba(224,90,90,0.1); border: 1px solid rgba(224,90,90,0.3); border-radius: 8px; padding: 14px 18px; color: var(--red); font-size: 13px; margin-bottom: 16px; display: none; }
+
+  /* LOADING */
+  .loading { text-align: center; padding: 48px; color: var(--muted); }
+  .spinner { width: 24px; height: 24px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; display: inline-block; margin-bottom: 12px; }
   @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* HISTORIAL */
+  .historial-wrap { max-width: 700px; }
+  .upload-steps { display: flex; gap: 8px; margin-bottom: 24px; }
+  .step-dot { width: 24px; height: 24px; border-radius: 50%; border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 11px; color: var(--muted); flex-shrink: 0; }
+  .step-dot.done { background: var(--accent); border-color: var(--accent); color: var(--bg); }
+  .step-dot.active { border-color: var(--accent); color: var(--accent); }
+
+  @media (max-width: 768px) {
+    nav { padding: 12px 16px; }
+    .page { padding: 16px; }
+    .dash-grid { grid-template-columns: 1fr; }
+    .form-grid { grid-template-columns: 1fr; }
+    .form-group.full { grid-column: 1; }
+    .filters { gap: 8px; }
+  }
 </style>
 </head>
 <body>
-<div class="container">
-  <div class="header">
-    <h1>🏗️ Estado de Israel</h1>
-    <p>Registro de gastos del proyecto</p>
-  </div>
 
-  <div class="card" id="input-section">
-    <div class="section-label">Comprobante <span style="font-weight:400;color:#ccc;">— opcional</span></div>
-    <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-in').click()"
-      ondragover="event.preventDefault();this.classList.add('drag')"
-      ondragleave="this.classList.remove('drag')"
-      ondrop="event.preventDefault();this.classList.remove('drag');handleDrop(event)">
-      <div id="drop-inner">
-        <div class="drop-icon">🧾</div>
-        <div class="drop-text">Tocá para subir o arrastrá el comprobante</div>
-        <div class="drop-sub">JPG · PNG · PDF</div>
+<nav>
+  <div class="nav-brand">Estado de <span>Israel</span></div>
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="showPage('dashboard')">Dashboard</button>
+    <button class="nav-tab" onclick="showPage('gastos')">Gastos</button>
+    <button class="nav-tab" onclick="showPage('cargar')">+ Cargar</button>
+    <button class="nav-tab" onclick="showPage('historial')">Historial WA</button>
+  </div>
+  <div class="nav-right">
+    <div class="tc-badge" onclick="actualizarTC()" title="Click para actualizar">USD/ARS <span id="tcValor">cargando...</span></div>
+  </div>
+</nav>
+
+<!-- DASHBOARD -->
+<div id="page-dashboard" class="page active">
+  <div class="metrics" id="metricsRow">
+    <div class="loading"><div class="spinner"></div><br>Cargando datos...</div>
+  </div>
+  <div class="dash-grid">
+    <div class="card">
+      <div class="card-title">Gastos por centro de costo</div>
+      <div id="barrasCentro"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Por categoría</div>
+      <div id="donutCat"></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">Últimos gastos <span id="ultimosCount" style="color:var(--muted)"></span></div>
+    <div id="ultimosGastos"></div>
+  </div>
+</div>
+
+<!-- GASTOS -->
+<div id="page-gastos" class="page">
+  <div class="filters">
+    <input class="filter-input" type="date" id="fDesde" placeholder="Desde" onchange="aplicarFiltros()">
+    <input class="filter-input" type="date" id="fHasta" placeholder="Hasta" onchange="aplicarFiltros()">
+    <select class="filter-input" id="fCentro" onchange="aplicarFiltros()">
+      <option value="">Todos los centros</option>
+      <option>Infraestructura agua y cloacas</option>
+      <option>Infraestructura gas</option>
+      <option>Infraestructura electricidad</option>
+      <option>Albañilería / obra civil</option>
+      <option>Honorarios profesionales</option>
+      <option>Trámites / legal</option>
+      <option>Otros</option>
+    </select>
+    <select class="filter-input" id="fCat" onchange="aplicarFiltros()">
+      <option value="">Todas las categorías</option>
+      <option>Materiales</option>
+      <option>Mano de obra</option>
+      <option>Honorarios</option>
+      <option>Servicios</option>
+      <option>Transporte</option>
+      <option>Impuestos/Tasas</option>
+      <option>Administrativo</option>
+      <option>Otro</option>
+    </select>
+    <input class="filter-input" type="text" id="fProveedor" placeholder="Proveedor..." oninput="aplicarFiltros()" style="width:160px">
+    <button class="btn-clear" onclick="limpiarFiltros()">✕ Limpiar</button>
+    <span id="filtroCount" style="color:var(--muted);font-size:11px;margin-left:4px"></span>
+  </div>
+  <div class="card" style="padding:0;overflow:hidden">
+    <div style="overflow-x:auto">
+      <table>
+        <thead>
+          <tr>
+            <th onclick="sortBy('fecha')">Fecha <span class="sort-arrow">↕</span></th>
+            <th onclick="sortBy('descripcion')">Descripción <span class="sort-arrow">↕</span></th>
+            <th onclick="sortBy('centro_costo')">Centro de costo <span class="sort-arrow">↕</span></th>
+            <th onclick="sortBy('categoria')">Categoría <span class="sort-arrow">↕</span></th>
+            <th onclick="sortBy('proveedor')">Proveedor <span class="sort-arrow">↕</span></th>
+            <th onclick="sortBy('pagado_por')">Pagado por <span class="sort-arrow">↕</span></th>
+            <th onclick="sortBy('monto')" style="text-align:right">Monto ARS <span class="sort-arrow">↕</span></th>
+            <th style="text-align:right">USD</th>
+          </tr>
+        </thead>
+        <tbody id="tablaBody">
+          <tr><td colspan="8" class="loading"><div class="spinner"></div></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="pagination" id="pagination" style="padding:12px 16px"></div>
+  </div>
+</div>
+
+<!-- CARGAR -->
+<div id="page-cargar" class="page">
+  <div style="max-width:680px">
+    <div class="success-msg" id="successMsg">✅ Gasto registrado correctamente.</div>
+    <div class="error-msg" id="errorMsg">❌ Error al registrar. Revisá los datos.</div>
+    <div class="card">
+      <div class="card-title">Nuevo gasto</div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Fecha *</label>
+          <input type="date" id="cFecha">
+        </div>
+        <div class="form-group">
+          <label>Monto *</label>
+          <div style="display:flex;gap:8px">
+            <select id="cMoneda" style="width:80px;flex-shrink:0">
+              <option value="ARS">ARS</option>
+              <option value="USD">USD</option>
+            </select>
+            <input type="number" id="cMonto" placeholder="0">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Categoría</label>
+          <select id="cCat">
+            <option>Materiales</option>
+            <option>Mano de obra</option>
+            <option>Honorarios</option>
+            <option>Servicios</option>
+            <option>Transporte</option>
+            <option>Impuestos/Tasas</option>
+            <option>Administrativo</option>
+            <option>Otro</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Centro de costo</label>
+          <select id="cCentro">
+            <option>Infraestructura agua y cloacas</option>
+            <option>Infraestructura gas</option>
+            <option>Infraestructura electricidad</option>
+            <option>Albañilería / obra civil</option>
+            <option>Honorarios profesionales</option>
+            <option>Trámites / legal</option>
+            <option>Otros</option>
+          </select>
+        </div>
+        <div class="form-group full">
+          <label>Descripción *</label>
+          <input type="text" id="cDesc" placeholder="Descripción del gasto...">
+        </div>
+        <div class="form-group">
+          <label>Proveedor</label>
+          <input type="text" id="cProv" placeholder="Nombre del proveedor">
+        </div>
+        <div class="form-group">
+          <label>Pagado por</label>
+          <select id="cPagadoPor">
+            <option>Fabián Chomicki</option>
+            <option>Julian Chomicki</option>
+            <option value="">Otro</option>
+          </select>
+        </div>
+        <div class="form-group full">
+          <label>Comprobante (opcional)</label>
+          <div class="dropzone" id="dropzone" onclick="document.getElementById('cFile').click()">
+            <div id="dropText">📎 Tocá para subir imagen o PDF</div>
+          </div>
+          <input type="file" id="cFile" accept="image/*,.pdf" style="display:none" onchange="onFileSelect(this)">
+        </div>
+      </div>
+      <div class="form-actions">
+        <button class="btn" onclick="limpiarForm()">Limpiar</button>
+        <button class="btn primary" id="btnGuardar" onclick="guardarGasto()">Guardar gasto</button>
       </div>
     </div>
-    <input type="file" id="file-in" style="display:none" accept="image/*,.pdf" onchange="handleFile(this.files[0])">
-
-    <div style="margin-top:1rem;">
-      <div class="section-label">Contexto <span style="font-weight:400;color:#ccc;">— opcional</span></div>
-      <textarea id="ctx-msg" placeholder="Ej: $85.000 para materiales eléctricos parcela 12, pagó Rodrigo el martes" oninput="onMsgInput(this)"></textarea>
-    </div>
-
-    <div class="hint" id="hint">Subí el comprobante, el mensaje, o los dos</div>
-
-    <button class="parse-btn" id="parse-btn" onclick="parse()" disabled>
-      ✦ Extraer gasto
-    </button>
   </div>
+</div>
 
-  <div id="result-area"></div>
+<!-- HISTORIAL -->
+<div id="page-historial" class="page">
+  <div class="historial-wrap">
+    <p style="color:var(--muted);margin-bottom:24px;line-height:1.7">Exportá el chat del grupo desde WhatsApp (sin archivos) y subí el .txt para extraer todos los gastos automáticamente.</p>
+    <div id="historialContent">
+      <div class="dropzone" id="dropTxt" onclick="document.getElementById('hFile').click()" style="margin-bottom:16px">
+        <div>📄 Subí el .txt exportado de WhatsApp</div>
+        <div style="font-size:11px;margin-top:6px;opacity:0.6">WhatsApp → Más opciones → Exportar chat → Sin archivos</div>
+      </div>
+      <input type="file" id="hFile" accept=".txt" style="display:none" onchange="procesarHistorial(this)">
+    </div>
+  </div>
 </div>
 
 <script>
-const SUPABASE_URL = "https://vccnehyvpextfodtvvxg.supabase.co/functions/v1/quick-processor";
-const CATS = ['Materiales','Mano de obra','Transporte','Honorarios','Servicios','Impuestos y tasas','Otros'];
-let fileB64 = null, fileMime = null, editing = false;
+const SUPABASE_URL = 'https://vccnehyvpextfodtvvxg.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZjY25laHl2cGV4dGZvZHR2dnhnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU5NTM5NzAsImV4cCI6MjA2MTUyOTk3MH0.LbkMMiJDIiLjgZy3s4iqhf_9FxzjvRD8clRTFX4h_Po';
+const EDGE_URL = 'https://vccnehyvpextfodtvvxg.supabase.co/functions/v1/quick-processor';
 
-function handleDrop(e) { const f = e.dataTransfer.files[0]; if (f) handleFile(f); }
+let allGastos = [];
+let filtrados = [];
+let sortCol = 'fecha';
+let sortDir = -1;
+let currentPage = 1;
+const PER_PAGE = 20;
+let tc = 1200;
 
-function handleFile(f) {
-  if (!f) return;
-  fileMime = f.type || 'image/jpeg';
-  const r = new FileReader();
-  r.onload = ev => {
-    fileB64 = ev.target.result.split(',')[1];
-    const dz = document.getElementById('drop-zone');
-    dz.classList.add('has-file');
-    if (f.type.startsWith('image/')) {
-      document.getElementById('drop-inner').innerHTML = `<img src="${ev.target.result}" class="preview-img" alt="Comprobante"><div class="file-name">✓ ${f.name}</div>`;
-    } else {
-      document.getElementById('drop-inner').innerHTML = `<div class="drop-icon">📄</div><div class="file-name">✓ ${f.name}</div>`;
+// ---- TIPO DE CAMBIO ----
+async function fetchTC() {
+  try {
+    const r = await fetch('https://api.bluelytics.com.ar/v2/latest');
+    const d = await r.json();
+    tc = d.blue?.sell || 1200;
+    document.getElementById('tcValor').textContent = '$' + Math.round(tc).toLocaleString('es-AR');
+  } catch {
+    document.getElementById('tcValor').textContent = 'N/D';
+  }
+}
+async function actualizarTC() {
+  document.getElementById('tcValor').textContent = '...';
+  await fetchTC();
+}
+
+// ---- DATOS ----
+async function fetchGastos() {
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/constructora_gastos?select=*&order=fecha.desc,created_at.desc`, {
+    headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+  });
+  return await r.json();
+}
+
+async function cargarTodo() {
+  allGastos = await fetchGastos();
+  filtrados = [...allGastos];
+  renderDashboard();
+  renderTabla();
+}
+
+// ---- NAVEGACION ----
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  event.target.classList.add('active');
+  if (name === 'gastos') renderTabla();
+}
+
+// ---- DASHBOARD ----
+function renderDashboard() {
+  const total = allGastos.reduce((s, g) => s + (parseFloat(g.monto) || 0), 0);
+  const totalUSD = total / tc;
+  const conComp = allGastos.filter(g => g.imagen_url || g.comprobante).length;
+
+  document.getElementById('metricsRow').innerHTML = `
+    <div class="metric"><div class="metric-label">Total invertido</div><div class="metric-value">$${Math.round(total).toLocaleString('es-AR')}</div><div class="metric-sub">≈ USD ${Math.round(totalUSD).toLocaleString('es-AR')}</div></div>
+    <div class="metric"><div class="metric-label">Cantidad de gastos</div><div class="metric-value">${allGastos.length}</div><div class="metric-sub">${conComp} con comprobante</div></div>
+    <div class="metric"><div class="metric-label">Promedio por gasto</div><div class="metric-value">$${allGastos.length ? Math.round(total/allGastos.length).toLocaleString('es-AR') : 0}</div></div>
+    <div class="metric"><div class="metric-label">Último registro</div><div class="metric-value" style="font-size:16px">${allGastos[0] ? fmtFecha(allGastos[0].fecha) : '—'}</div><div class="metric-sub">${allGastos[0]?.descripcion?.substring(0,30) || ''}</div></div>
+  `;
+
+  // Barras por centro de costo
+  const byCentro = {};
+  allGastos.forEach(g => {
+    const k = g.centro_costo || 'Otros';
+    byCentro[k] = (byCentro[k] || 0) + (parseFloat(g.monto) || 0);
+  });
+  const maxCentro = Math.max(...Object.values(byCentro));
+  const centroHtml = Object.entries(byCentro).sort((a,b) => b[1]-a[1]).map(([k,v]) => `
+    <div class="bar-item">
+      <div class="bar-label">${k}</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${maxCentro ? (v/maxCentro*100) : 0}%"></div></div>
+      <div class="bar-amt">$${Math.round(v/1000).toLocaleString('es-AR')}k</div>
+    </div>`).join('');
+  document.getElementById('barrasCentro').innerHTML = centroHtml || '<div style="color:var(--muted);font-size:12px">Sin datos</div>';
+
+  // Donut por categoría
+  const byCat = {};
+  allGastos.forEach(g => { const k = g.categoria || 'Otro'; byCat[k] = (byCat[k] || 0) + (parseFloat(g.monto) || 0); });
+  const cats = Object.entries(byCat).sort((a,b) => b[1]-a[1]);
+  const colors = ['#c8b560','#6ab0d4','#5db87a','#e05a5a','#b07cc8','#e0905a','#888882'];
+  const totalCat = cats.reduce((s,[,v]) => s+v, 0);
+  let startAngle = -Math.PI/2;
+  const r = 60, cx = 75, cy = 75;
+  const paths = cats.map(([,v], i) => {
+    const angle = (v/totalCat) * 2 * Math.PI;
+    const x1 = cx + r * Math.cos(startAngle);
+    const y1 = cy + r * Math.sin(startAngle);
+    startAngle += angle;
+    const x2 = cx + r * Math.cos(startAngle);
+    const y2 = cy + r * Math.sin(startAngle);
+    const large = angle > Math.PI ? 1 : 0;
+    const path = `M${cx},${cy} L${x1},${y1} A${r},${r} 0 ${large},1 ${x2},${y2} Z`;
+    return `<path d="${path}" fill="${colors[i % colors.length]}" opacity="0.85"/>`;
+  }).join('');
+  const legend = cats.slice(0,6).map(([k,v], i) => `
+    <div class="legend-item">
+      <div class="legend-dot" style="background:${colors[i % colors.length]}"></div>
+      <span style="color:var(--muted)">${k}</span>
+      <span style="margin-left:auto;color:var(--text)">${totalCat ? Math.round(v/totalCat*100) : 0}%</span>
+    </div>`).join('');
+  document.getElementById('donutCat').innerHTML = cats.length ? `
+    <div class="donut-wrap">
+      <svg class="donut" width="150" height="150" viewBox="0 0 150 150">
+        <circle cx="${cx}" cy="${cy}" r="30" fill="var(--bg2)"/>
+        ${paths}
+        <circle cx="${cx}" cy="${cy}" r="30" fill="var(--bg2)"/>
+      </svg>
+      <div class="donut-legend">${legend}</div>
+    </div>` : '<div style="color:var(--muted);font-size:12px">Sin datos</div>';
+
+  // Últimos gastos
+  const ultimos = allGastos.slice(0, 8);
+  document.getElementById('ultimosCount').textContent = `(${allGastos.length} total)`;
+  document.getElementById('ultimosGastos').innerHTML = ultimos.map(g => `
+    <div class="recent-item">
+      <div class="recent-dot"></div>
+      <div class="recent-info">
+        <div class="recent-desc">${g.descripcion || '—'}</div>
+        <div class="recent-meta">${fmtFecha(g.fecha)} · ${g.proveedor || g.pagado_por || '—'} · ${g.centro_costo || ''}</div>
+      </div>
+      <div class="recent-monto">${g.moneda === 'USD' ? 'USD ' : '$'}${parseFloat(g.monto || 0).toLocaleString('es-AR')}</div>
+    </div>`).join('') || '<div style="color:var(--muted);padding:16px 0">Sin gastos cargados aún</div>';
+}
+
+// ---- TABLA ----
+function aplicarFiltros() {
+  const desde = document.getElementById('fDesde').value;
+  const hasta = document.getElementById('fHasta').value;
+  const centro = document.getElementById('fCentro').value;
+  const cat = document.getElementById('fCat').value;
+  const prov = document.getElementById('fProveedor').value.toLowerCase();
+
+  filtrados = allGastos.filter(g => {
+    if (desde && g.fecha < desde) return false;
+    if (hasta && g.fecha > hasta) return false;
+    if (centro && g.centro_costo !== centro) return false;
+    if (cat && g.categoria !== cat) return false;
+    if (prov && !(g.proveedor || '').toLowerCase().includes(prov) && !(g.descripcion || '').toLowerCase().includes(prov)) return false;
+    return true;
+  });
+
+  currentPage = 1;
+  document.getElementById('filtroCount').textContent = filtrados.length !== allGastos.length ? `${filtrados.length} resultados` : '';
+  sortAndRender();
+}
+
+function limpiarFiltros() {
+  ['fDesde','fHasta','fProveedor'].forEach(id => document.getElementById(id).value = '');
+  ['fCentro','fCat'].forEach(id => document.getElementById(id).selectedIndex = 0);
+  filtrados = [...allGastos];
+  currentPage = 1;
+  document.getElementById('filtroCount').textContent = '';
+  sortAndRender();
+}
+
+function sortBy(col) {
+  if (sortCol === col) sortDir *= -1;
+  else { sortCol = col; sortDir = -1; }
+  document.querySelectorAll('th').forEach(th => th.classList.remove('sorted'));
+  event.target.classList.add('sorted');
+  sortAndRender();
+}
+
+function sortAndRender() {
+  filtrados.sort((a, b) => {
+    let va = a[sortCol] || '', vb = b[sortCol] || '';
+    if (sortCol === 'monto') { va = parseFloat(va) || 0; vb = parseFloat(vb) || 0; }
+    return va < vb ? sortDir : va > vb ? -sortDir : 0;
+  });
+  renderTabla();
+}
+
+function renderTabla() {
+  const start = (currentPage - 1) * PER_PAGE;
+  const page = filtrados.slice(start, start + PER_PAGE);
+  const totalFilt = filtrados.reduce((s, g) => s + (parseFloat(g.monto) || 0), 0);
+
+  const catClass = { Materiales: 'pill-mat', 'Mano de obra': 'pill-mo', Honorarios: 'pill-hon' };
+
+  document.getElementById('tablaBody').innerHTML = page.length ? [
+    ...page.map(g => `
+    <tr>
+      <td>${fmtFecha(g.fecha)}</td>
+      <td style="max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${g.descripcion || '—'}</td>
+      <td style="max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--muted)">${g.centro_costo || '—'}</td>
+      <td><span class="pill ${catClass[g.categoria] || 'pill-otro'}">${g.categoria || '—'}</span></td>
+      <td style="color:var(--muted)">${g.proveedor || '—'}</td>
+      <td style="color:var(--muted)">${g.pagado_por || '—'}</td>
+      <td class="monto-cell" style="text-align:right">${g.moneda === 'USD' ? 'USD ' : '$'}${parseFloat(g.monto || 0).toLocaleString('es-AR')}</td>
+      <td class="usd-cell" style="text-align:right">${g.moneda === 'USD' ? '—' : 'USD ' + Math.round((parseFloat(g.monto)||0)/tc).toLocaleString('es-AR')}</td>
+    </tr>`),
+    `<tr style="background:rgba(200,181,96,0.04)">
+      <td colspan="6" style="color:var(--muted);font-size:11px">Total filtrado</td>
+      <td class="monto-cell" style="text-align:right">$${Math.round(totalFilt).toLocaleString('es-AR')}</td>
+      <td class="usd-cell" style="text-align:right">USD ${Math.round(totalFilt/tc).toLocaleString('es-AR')}</td>
+    </tr>`
+  ].join('') : '<tr><td colspan="8" style="text-align:center;padding:32px;color:var(--muted)">Sin resultados</td></tr>';
+
+  // Paginación
+  const totalPages = Math.ceil(filtrados.length / PER_PAGE);
+  let pag = `<span>${start+1}–${Math.min(start+PER_PAGE, filtrados.length)} de ${filtrados.length}</span>`;
+  if (totalPages > 1) {
+    if (currentPage > 1) pag += `<button class="page-btn" onclick="goPage(${currentPage-1})">←</button>`;
+    for (let i = Math.max(1, currentPage-2); i <= Math.min(totalPages, currentPage+2); i++) {
+      pag += `<button class="page-btn ${i===currentPage?'active':''}" onclick="goPage(${i})">${i}</button>`;
     }
-    updateReady();
+    if (currentPage < totalPages) pag += `<button class="page-btn" onclick="goPage(${currentPage+1})">→</button>`;
+  }
+  document.getElementById('pagination').innerHTML = pag;
+}
+
+function goPage(n) { currentPage = n; renderTabla(); window.scrollTo(0, 0); }
+
+// ---- CARGAR GASTO ----
+let selectedFile = null;
+function onFileSelect(input) {
+  selectedFile = input.files[0];
+  if (selectedFile) {
+    document.getElementById('dropText').textContent = '✅ ' + selectedFile.name;
+    document.getElementById('dropzone').classList.add('has-file');
+  }
+}
+
+function limpiarForm() {
+  ['cDesc','cMonto','cProv'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('cFecha').value = new Date().toISOString().split('T')[0];
+  selectedFile = null;
+  document.getElementById('dropText').textContent = '📎 Tocá para subir imagen o PDF';
+  document.getElementById('dropzone').classList.remove('has-file');
+  document.getElementById('cFile').value = '';
+}
+
+async function guardarGasto() {
+  const fecha = document.getElementById('cFecha').value;
+  const monto = parseFloat(document.getElementById('cMonto').value);
+  const desc = document.getElementById('cDesc').value.trim();
+
+  if (!fecha || !monto || !desc) {
+    document.getElementById('errorMsg').textContent = '❌ Completá fecha, monto y descripción.';
+    document.getElementById('errorMsg').style.display = 'block';
+    setTimeout(() => document.getElementById('errorMsg').style.display = 'none', 3000);
+    return;
+  }
+
+  const btn = document.getElementById('btnGuardar');
+  btn.textContent = 'Guardando...'; btn.disabled = true;
+
+  let imagen_url = null;
+  if (selectedFile) {
+    const ext = selectedFile.name.split('.').pop();
+    const fname = `${Date.now()}.${ext}`;
+    const up = await fetch(`${SUPABASE_URL}/storage/v1/object/constructora-comprobantes/${fname}`, {
+      method: 'POST',
+      headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': selectedFile.type },
+      body: selectedFile
+    });
+    if (up.ok) imagen_url = `${SUPABASE_URL}/storage/v1/object/public/constructora-comprobantes/${fname}`;
+  }
+
+  const gasto = {
+    fecha, monto,
+    moneda: document.getElementById('cMoneda').value,
+    categoria: document.getElementById('cCat').value,
+    centro_costo: document.getElementById('cCentro').value,
+    descripcion: desc,
+    proveedor: document.getElementById('cProv').value || null,
+    pagado_por: document.getElementById('cPagadoPor').value || null,
+    fuente: 'webapp',
+    imagen_url
   };
-  r.readAsDataURL(f);
+
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/constructora_gastos`, {
+    method: 'POST',
+    headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+    body: JSON.stringify(gasto)
+  });
+
+  btn.textContent = 'Guardar gasto'; btn.disabled = false;
+
+  if (r.ok) {
+    document.getElementById('successMsg').style.display = 'block';
+    setTimeout(() => document.getElementById('successMsg').style.display = 'none', 3000);
+    limpiarForm();
+    allGastos = await fetchGastos();
+    filtrados = [...allGastos];
+  } else {
+    document.getElementById('errorMsg').textContent = '❌ Error al guardar. Intentá de nuevo.';
+    document.getElementById('errorMsg').style.display = 'block';
+    setTimeout(() => document.getElementById('errorMsg').style.display = 'none', 3000);
+  }
 }
 
-function onMsgInput(el) {
-  el.classList.toggle('has-content', el.value.trim().length > 0);
-  updateReady();
-}
+// ---- HISTORIAL ----
+async function procesarHistorial(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const txt = await file.text();
+  const wrap = document.getElementById('historialContent');
+  wrap.innerHTML = '<div class="loading"><div class="spinner"></div><br>Claude está analizando el historial...</div>';
 
-function updateReady() {
-  const hasFile = !!fileB64;
-  const hasMsg = document.getElementById('ctx-msg').value.trim().length > 2;
-  document.getElementById('parse-btn').disabled = !(hasFile || hasMsg);
-  let hint = 'Subí el comprobante, el mensaje, o los dos';
-  if (hasFile && hasMsg) hint = '✓ Perfecto — el agente va a cruzar ambas fuentes';
-  else if (hasFile) hint = 'Podés agregar un mensaje para dar más contexto';
-  else if (hasMsg) hint = 'Podés agregar el comprobante para mayor precisión';
-  document.getElementById('hint').textContent = hint;
-}
+  const prompt = `Extraé TODOS los gastos del siguiente historial de WhatsApp de un grupo de obra. Cada gasto tiene una imagen adjunta seguida de texto descriptivo. Devolvé SOLO JSON válido sin backticks:
+{"gastos":[{"fecha":"YYYY-MM-DD","monto":0,"moneda":"ARS","categoria":"Otro","centro_costo":"Otros","descripcion":"","pagado_por":"","proveedor":"","comprobante":""}]}
 
-async function parse() {
-  const msg = document.getElementById('ctx-msg').value.trim();
-  const btn = document.getElementById('parse-btn');
-  btn.disabled = true;
-  btn.innerHTML = '<div class="spinner"></div> Analizando...';
+Categorías: Materiales, Mano de obra, Honorarios, Servicios, Transporte, Impuestos/Tasas, Administrativo, Otro
+Centros de costo: "Infraestructura agua y cloacas", "Infraestructura gas", "Infraestructura electricidad", "Albañilería / obra civil", "Honorarios profesionales", "Trámites / legal", "Otros"
+Para comprobante: poner el nombre del archivo adjunto sin extensión (ej: IMG-20251117-WA0010)
 
-  const today = new Date().toISOString().split('T')[0];
-  const system = `Sos un agente de extracción de gastos para "Estado de Israel", un proyecto de loteo en Cipolletti, Río Negro, Argentina.
-
-Recibís una imagen de comprobante y/o un mensaje de contexto. Extraé el mejor registro posible de gasto con lo que tengas.
-
-Devolvé SOLO un JSON válido, sin markdown, con estos campos:
-- date: fuente: "receipt", "message", "inferred", o "missing"
-- date_value: string ISO o null
-- amount_ars: número o null
-- amount_source: "receipt", "message", "inferred", o "missing"
-- description: string en español, máx 70 caracteres
-- description_source: "receipt", "message", "inferred", o "missing"
-- category: una de: Materiales, Mano de obra, Transporte, Honorarios, Servicios, Impuestos y tasas, Otros
-- category_source: "receipt", "message", o "inferred"
-- paid_by: string o null
-- paid_by_source: "message", "inferred", o "missing"
-- vendor: string o null
-- vendor_source: "receipt", "message", "inferred", o "missing"
-- overall_confidence: número 0-1
-- missing_fields: array de campos que no se pudieron determinar
-- agent_note: nota breve en español sobre qué se encontró, qué se infirió y qué falta
-
-Hoy es ${today}. Argentina usa punto como separador de miles y coma como decimal.`;
-
-  const content = [];
-  if (fileB64) content.push({ type: 'image', source: { type: 'base64', media_type: fileMime, data: fileB64 } });
-  content.push({ type: 'text', text: msg ? `Mensaje de contexto del grupo de WhatsApp:\n${msg}` : 'No hay mensaje de contexto. Extraé solo del comprobante.' });
+HISTORIAL:
+${txt.slice(0, 80000)}`;
 
   try {
-    const res = await fetch(SUPABASE_URL, {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ system, messages: [{ role: 'user', content }] })
+      body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 6000, messages: [{ role: 'user', content: prompt }] })
     });
-    const exp = await res.json();
-    if (exp.error) throw new Error(exp.error);
-    window._exp = exp;
-    renderResult(exp);
+    const data = await res.json();
+    const raw = data.content?.[0]?.text || '{"gastos":[]}';
+    const parsed = JSON.parse(raw.replace(/```json|```/g, '').trim());
+    renderHistorialTabla(parsed.gastos || []);
   } catch(e) {
-    document.getElementById('result-area').innerHTML = `<div class="error">⚠️ ${e.message}</div>`;
+    wrap.innerHTML = `<div style="color:var(--red);padding:16px">Error: ${e.message}</div>`;
   }
-
-  btn.disabled = false;
-  btn.innerHTML = '✦ Extraer gasto';
 }
 
-function srcTag(src) {
-  if (!src || src === 'missing') return `<span class="src-tag src-missing">falta</span>`;
-  if (src === 'receipt') return `<span class="src-tag src-receipt">comprobante</span>`;
-  if (src === 'message') return `<span class="src-tag src-msg">mensaje</span>`;
-  if (src === 'inferred') return `<span class="src-tag src-inferred">inferido</span>`;
-  return '';
-}
-
-function fieldClass(src) {
-  if (src === 'missing') return 'field missing';
-  if (src === 'inferred') return 'field inferred';
-  return 'field';
-}
-
-function renderResult(exp) {
-  const conf = Math.round((exp.overall_confidence || 0.8) * 100);
-  const amtDisplay = exp.amount_ars != null ? '$' + Number(exp.amount_ars).toLocaleString('es-AR') : '—';
-  const dateDisplay = exp.date_value ? new Date(exp.date_value).toLocaleDateString('es-AR', {day:'2-digit',month:'2-digit',year:'numeric'}) : '—';
-
-  document.getElementById('result-area').innerHTML = `
-    <div class="result-card" id="result-card">
-      <div class="result-header">
-        <span class="result-title">Gasto detectado</span>
-        <div style="display:flex;gap:8px;align-items:center;">
-          <span class="cat-badge" id="b-cat">${exp.category}</span>
-          <span style="font-size:12px;color:#bbb;">${conf}%</span>
-        </div>
-      </div>
-      <div class="fields">
-        <div class="${fieldClass(exp.amount_source)}">
-          ${srcTag(exp.amount_source)}
-          <div class="flabel">Monto</div>
-          <div class="fval big" id="f-amount">${amtDisplay}</div>
-        </div>
-        <div class="${fieldClass(exp.date)}">
-          ${srcTag(exp.date)}
-          <div class="flabel">Fecha</div>
-          <div class="fval" id="f-date">${dateDisplay}</div>
-        </div>
-        <div class="${fieldClass(exp.description_source)} full">
-          ${srcTag(exp.description_source)}
-          <div class="flabel">Descripción</div>
-          <div class="fval" id="f-desc">${exp.description || '—'}</div>
-        </div>
-        <div class="${fieldClass(exp.paid_by_source)}">
-          ${srcTag(exp.paid_by_source)}
-          <div class="flabel">Pagado por</div>
-          <div class="fval ${!exp.paid_by ? 'muted' : ''}" id="f-paid">${exp.paid_by || 'No especificado'}</div>
-        </div>
-        <div class="${fieldClass(exp.vendor_source)}">
-          ${srcTag(exp.vendor_source)}
-          <div class="flabel">Proveedor</div>
-          <div class="fval ${!exp.vendor ? 'muted' : ''}" id="f-vendor">${exp.vendor || '—'}</div>
-        </div>
-      </div>
-      <div class="legend">
-        <div class="leg"><div class="leg-dot" style="background:#dbeafe;"></div>del comprobante</div>
-        <div class="leg"><div class="leg-dot" style="background:#dcfce7;"></div>del mensaje</div>
-        <div class="leg"><div class="leg-dot" style="background:#fef9c3;"></div>inferido</div>
-        <div class="leg"><div class="leg-dot" style="background:#fee2e2;"></div>falta</div>
-      </div>
-      ${exp.agent_note ? `<div class="agent-note">ℹ️ <span>${exp.agent_note}</span></div>` : ''}
-      <div class="actions">
-        <button class="btn-add" id="add-btn" onclick="confirmAdd()">
-          ✓ Guardar en la planilla
-        </button>
-        <button class="btn-edit" id="edit-btn" onclick="toggleEdit()">
-          ✎ Editar
-        </button>
-      </div>
+function renderHistorialTabla(gastos) {
+  const wrap = document.getElementById('historialContent');
+  if (!gastos.length) { wrap.innerHTML = '<div style="color:var(--muted)">No se encontraron gastos.</div>'; return; }
+  const total = gastos.reduce((s,g) => s+(parseFloat(g.monto)||0), 0);
+  wrap.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <div style="color:var(--muted);font-size:12px">${gastos.length} gastos encontrados · Total $${Math.round(total).toLocaleString('es-AR')}</div>
+      <button class="btn primary" onclick="cargarHistorialASupabase()">Cargar todos al dashboard →</button>
     </div>
-    <button class="btn-new" onclick="reset()">+ Nuevo gasto</button>`;
+    <div style="overflow-x:auto;max-height:500px;overflow-y:auto">
+    <table id="hTabla">
+      <thead><tr>
+        <th>Fecha</th><th>Monto</th><th>Centro de costo</th><th>Descripción</th><th>Proveedor</th>
+      </tr></thead>
+      <tbody>${gastos.map((g,i) => `<tr data-idx="${i}">
+        <td><input value="${g.fecha||''}" style="width:110px" onchange="hGastos[${i}].fecha=this.value"></td>
+        <td><input type="number" value="${g.monto||''}" style="width:100px" onchange="hGastos[${i}].monto=this.value"></td>
+        <td><select onchange="hGastos[${i}].centro_costo=this.value" style="width:180px">
+          ${['Infraestructura agua y cloacas','Infraestructura gas','Infraestructura electricidad','Albañilería / obra civil','Honorarios profesionales','Trámites / legal','Otros'].map(c=>`<option ${c===g.centro_costo?'selected':''}>${c}</option>`).join('')}
+        </select></td>
+        <td><input value="${g.descripcion||''}" style="width:200px" onchange="hGastos[${i}].descripcion=this.value"></td>
+        <td><input value="${g.proveedor||''}" style="width:130px" onchange="hGastos[${i}].proveedor=this.value"></td>
+      </tr>`).join('')}</tbody>
+    </table></div>`;
+  window.hGastos = gastos;
 }
 
-let _editing = false;
-function toggleEdit() {
-  _editing = !_editing;
-  const exp = window._exp;
-  const btn = document.getElementById('edit-btn');
-  if (_editing) {
-    document.getElementById('f-amount').innerHTML = `<input type="text" value="${exp.amount_ars || ''}" id="e-amount">`;
-    document.getElementById('f-date').innerHTML = `<input type="date" value="${exp.date_value || ''}" id="e-date">`;
-    document.getElementById('f-desc').innerHTML = `<input type="text" value="${exp.description || ''}" id="e-desc">`;
-    document.getElementById('f-paid').innerHTML = `<input type="text" value="${exp.paid_by || ''}" id="e-paid">`;
-    document.getElementById('f-vendor').innerHTML = `<input type="text" value="${exp.vendor || ''}" id="e-vendor">`;
-    document.getElementById('b-cat').innerHTML = `<select id="e-cat" style="border:none;background:transparent;color:#1d4ed8;font-size:12px;font-weight:500;font-family:inherit;cursor:pointer;">${CATS.map(c=>`<option${c===exp.category?' selected':''}>${c}</option>`).join('')}</select>`;
-    btn.textContent = '✓ Guardar';
-  } else {
-    const updated = {
-      ...exp,
-      amount_ars: parseFloat((document.getElementById('e-amount').value||'').replace(/\./g,'').replace(',','.')) || exp.amount_ars,
-      date_value: document.getElementById('e-date').value || exp.date_value,
-      description: document.getElementById('e-desc').value || exp.description,
-      paid_by: document.getElementById('e-paid').value || exp.paid_by,
-      vendor: document.getElementById('e-vendor').value || exp.vendor,
-      category: document.getElementById('e-cat').value
-    };
-    window._exp = updated;
-    document.getElementById('f-amount').textContent = updated.amount_ars != null ? '$' + Number(updated.amount_ars).toLocaleString('es-AR') : '—';
-    document.getElementById('f-date').textContent = updated.date_value ? new Date(updated.date_value).toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'numeric'}) : '—';
-    document.getElementById('f-desc').textContent = updated.description || '—';
-    document.getElementById('f-paid').textContent = updated.paid_by || 'No especificado';
-    document.getElementById('f-vendor').textContent = updated.vendor || '—';
-    document.getElementById('b-cat').textContent = updated.category;
-    btn.innerHTML = '✎ Editar';
+async function cargarHistorialASupabase() {
+  const btn = event.target;
+  btn.textContent = 'Cargando...'; btn.disabled = true;
+  let ok = 0;
+  for (const g of window.hGastos) {
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/constructora_gastos`, {
+        method: 'POST',
+        headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+        body: JSON.stringify({ ...g, monto: parseFloat(g.monto)||0, fuente: 'historial-whatsapp' })
+      });
+      ok++;
+    } catch {}
+    await new Promise(r => setTimeout(r, 80));
   }
+  btn.textContent = `✅ ${ok} gastos cargados`;
+  allGastos = await fetchGastos();
+  filtrados = [...allGastos];
+  renderDashboard();
 }
 
-async function confirmAdd() {
-  const exp = window._exp;
-  const btn = document.getElementById('add-btn');
-  btn.innerHTML = '<div class="spinner" style="border-top-color:#15803d;border-color:#bbf7d0;"></div> Guardando...';
-  btn.disabled = true;
-
-  await new Promise(r => setTimeout(r, 600));
-
-  document.getElementById('result-card').innerHTML = `
-    <div class="success">
-      <div class="success-icon">✅</div>
-      <div>
-        <div class="success-title">Guardado en la planilla</div>
-        <div class="success-sub">${exp.description} · ${exp.amount_ars != null ? '$' + Number(exp.amount_ars).toLocaleString('es-AR') : 'monto pendiente'}</div>
-      </div>
-    </div>`;
+// ---- UTILS ----
+function fmtFecha(f) {
+  if (!f) return '—';
+  const [y,m,d] = f.split('-');
+  return `${d}/${m}/${y}`;
 }
 
-function reset() {
-  fileB64 = null; fileMime = null; _editing = false; window._exp = null;
-  document.getElementById('file-in').value = '';
-  document.getElementById('ctx-msg').value = '';
-  document.getElementById('ctx-msg').classList.remove('has-content');
-  document.getElementById('result-area').innerHTML = '';
-  const dz = document.getElementById('drop-zone');
-  dz.classList.remove('has-file');
-  document.getElementById('drop-inner').innerHTML = `<div class="drop-icon">🧾</div><div class="drop-text">Tocá para subir o arrastrá el comprobante</div><div class="drop-sub">JPG · PNG · PDF</div>`;
-  document.getElementById('parse-btn').disabled = true;
-  document.getElementById('parse-btn').innerHTML = '✦ Extraer gasto';
-  document.getElementById('hint').textContent = 'Subí el comprobante, el mensaje, o los dos';
-}
+// ---- INIT ----
+document.getElementById('cFecha').value = new Date().toISOString().split('T')[0];
+fetchTC();
+cargarTodo();
 </script>
 </body>
 </html>
