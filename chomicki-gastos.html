@@ -701,7 +701,7 @@ async function guardarGasto() {
     const fname = `${Date.now()}.${ext}`;
     const up = await fetch(`${SUPABASE_URL}/storage/v1/object/constructora-comprobantes/${fname}`, {
       method: 'POST',
-      headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': selectedFile.type },
+      headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': selectedFile.type, 'x-upsert': 'true' },
       body: selectedFile
     });
     if (up.ok) imagen_url = `${SUPABASE_URL}/storage/v1/object/public/constructora-comprobantes/${fname}`;
@@ -874,7 +874,7 @@ async function cargarHistorialASupabase(btn) {
       try {
         const up = await fetch(`${SUPABASE_URL}/storage/v1/object/constructora-comprobantes/${fname}`, {
           method: 'POST',
-          headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': imgFile.type },
+          headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': imgFile.type, 'x-upsert': 'true' },
           body: imgFile
         });
         if (up.ok) { imagen_url = `${SUPABASE_URL}/storage/v1/object/public/constructora-comprobantes/${fname}`; imgOk++; }
@@ -982,22 +982,43 @@ async function eliminarGasto(id) {
 
 // ---- CLEAR DATA ----
 async function clearData() {
-  const confirm1 = confirm('⚠️ ¿Seguro que querés borrar TODOS los gastos?\nEsta acción no se puede deshacer.');
+  const confirm1 = confirm('⚠️ ¿Seguro que querés borrar TODOS los gastos y comprobantes?\nEsta acción no se puede deshacer.');
   if (!confirm1) return;
-  const confirm2 = confirm('¿Estás completamente seguro? Se borrarán todos los registros de la base de datos.');
+  const confirm2 = confirm('¿Estás completamente seguro? Se borrarán todos los registros y archivos.');
   if (!confirm2) return;
 
+  // Delete all records
   const r = await fetch(`${SUPABASE_URL}/rest/v1/constructora_gastos?id=neq.00000000-0000-0000-0000-000000000000`, {
     method: 'DELETE',
     headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
   });
 
   if (r.ok) {
+    // List and delete all files in bucket
+    try {
+      const listRes = await fetch(`${SUPABASE_URL}/storage/v1/object/list/constructora-comprobantes`, {
+        method: 'POST',
+        headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prefix: '', limit: 1000 })
+      });
+      if (listRes.ok) {
+        const files = await listRes.json();
+        if (files.length > 0) {
+          const names = files.map((f) => f.name);
+          await fetch(`${SUPABASE_URL}/storage/v1/object/constructora-comprobantes`, {
+            method: 'DELETE',
+            headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ prefixes: names })
+          });
+        }
+      }
+    } catch(e) { console.log('Storage clear error:', e); }
+
     allGastos = [];
     filtrados = [];
     renderDashboard();
     renderTabla();
-    alert('✅ Datos borrados correctamente.');
+    alert('✅ Datos y comprobantes borrados correctamente.');
   } else {
     alert('❌ Error al borrar. Intentá desde el SQL Editor de Supabase.');
   }
