@@ -610,8 +610,8 @@ function renderTabla() {
       const imgIcon = g.imagen_url ? `<span style="cursor:pointer;font-size:15px;margin-left:6px" onclick="event.stopPropagation();window.open('${g.imagen_url}','_blank')" title="Ver comprobante">📎</span>` : '';
       return `<tr style="cursor:pointer" onclick="abrirDetalle('${g.id}')">
         <td style="white-space:nowrap">${fmtFecha(g.fecha)}</td>
-        <td style="min-width:200px;max-width:300px">
-          <div style="white-space:normal;line-height:1.4;font-size:13px">${g.descripcion || '—'}</div>
+        <td style="min-width:200px;max-width:300px" onclick="event.stopPropagation()">
+          <textarea onchange="actualizarCampo('${g.id}','descripcion',this.value)" style="background:transparent;border:none;border-bottom:1px dashed transparent;color:var(--text);font-family:var(--mono);font-size:13px;width:100%;padding:2px 0;resize:none;line-height:1.4;overflow:hidden" rows="2" onmouseover="this.style.borderBottomColor='var(--border)'" onmouseout="this.style.borderBottomColor='transparent'">${g.descripcion || ''}</textarea>
         </td>
         <td onclick="event.stopPropagation()">
           <select onchange="actualizarCentro('${g.id}',this.value)" style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:var(--mono);font-size:11px;padding:3px 6px;width:100%;cursor:pointer">
@@ -1029,6 +1029,16 @@ function abrirDetalle(id) {
   const fuenteLabels = {'whatsapp-bot':'🤖 Bot de WhatsApp','webapp':'💻 Webapp','historial-whatsapp':'📋 Historial WhatsApp'};
   document.getElementById('mFuente').textContent = fuenteLabels[g.fuente] || g.fuente || '—';
 
+  const msgEl = document.getElementById('mMensajeOriginal');
+  if (g.mensaje_original) {
+    msgEl.innerHTML = `<div style="background:rgba(200,181,96,0.06);border-left:3px solid var(--accent);border-radius:0 8px 8px 0;padding:12px 16px">
+      <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--accent);margin-bottom:6px">💬 Mensaje original de WhatsApp</div>
+      <div style="font-size:13px;color:var(--text);line-height:1.6;white-space:pre-wrap">${g.mensaje_original}</div>
+    </div>`;
+  } else {
+    msgEl.innerHTML = '';
+  }
+
   const comp = document.getElementById('mComprobante');
   if (g.imagen_url) {
     const isImg = /\.(jpg|jpeg|png|gif|webp)$/i.test(g.imagen_url);
@@ -1107,6 +1117,7 @@ cargarTodo();
         <div style="font-size:13px;color:var(--text)" id="mFuente"></div>
       </div>
     </div>
+    <div id="mMensajeOriginal" style="margin-bottom:16px"></div>
     <div id="mComprobante"></div>
   </div>
 </div>
