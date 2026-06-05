@@ -1638,12 +1638,17 @@ async function subirArchivosPresupuesto(files) {
       headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': file.type || 'application/octet-stream', 'x-upsert': 'true' },
       body: file
     });
-    if (!upRes.ok) { console.error('Error subiendo', file.name); continue; }
+    if (!upRes.ok) {
+      const errBody = await upRes.text();
+      console.error('Error subiendo archivo:', upRes.status, errBody);
+      alert(`Error al subir "${file.name}": ${upRes.status} — ${errBody}`);
+      continue;
+    }
 
     const url = `${SUPABASE_URL}/storage/v1/object/public/${BUCKET_PRES}/${fileName}`;
 
     // Insert record
-    await fetch(`${SUPABASE_URL}/rest/v1/constructora_presupuesto_archivos`, {
+    const insRes = await fetch(`${SUPABASE_URL}/rest/v1/constructora_presupuesto_archivos`, {
       method: 'POST',
       headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
       body: JSON.stringify({
@@ -1654,7 +1659,11 @@ async function subirArchivosPresupuesto(files) {
         tamanio: file.size
       })
     });
-  }
+    if (!insRes.ok) {
+      const errBody = await insRes.text();
+      console.error('Error insertando registro:', insRes.status, errBody);
+      alert(`Archivo subido pero error al guardar registro: ${insRes.status} — ${errBody}`);
+    }
 
   dropzone.innerHTML = originalHtml;
   dropzone.style.pointerEvents = '';
