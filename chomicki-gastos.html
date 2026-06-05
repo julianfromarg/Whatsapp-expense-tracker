@@ -626,7 +626,7 @@ function renderTabla() {
         <td onclick="event.stopPropagation()">
           <select onchange="actualizarCampo('${g.id}','proveedor',this.value)" style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;color:var(--muted);font-family:var(--mono);font-size:11px;padding:3px 6px;width:100%;cursor:pointer">
             <option value="">—</option>
-            ${(window.proveedoresList||[]).map(p=>`<option ${p===g.proveedor?'selected':''}>${p}</option>`).join('')}
+            ${[...new Set([...(window.proveedoresList||[]), ...(g.proveedor ? [g.proveedor] : [])])].map(p=>`<option ${p===g.proveedor?'selected':''}>${p}</option>`).join('')}
           </select>
         </td>
         <td style="color:var(--muted);font-size:12px">${g.pagado_por || '—'}</td>
@@ -923,7 +923,7 @@ function renderConfig() {
     ? provs.map(p => `
       <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border)">
         <span style="flex:1;font-size:13px">${p}</span>
-        <button onclick="eliminarProveedor('${p.replace(/'/g,"\\'")}'')" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:13px;padding:2px 6px" title="Eliminar">✕</button>
+        <button onclick="eliminarProveedor('${p.replace(/'/g,"\\'")}')" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:13px;padding:2px 6px" title="Eliminar">✕</button>
       </div>`).join('')
     : '<div style="color:var(--muted);font-size:13px;padding:8px 0">Sin proveedores cargados</div>';
 
