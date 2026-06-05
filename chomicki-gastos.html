@@ -846,7 +846,7 @@ function renderBvaTable() {
       + '<td class="bva-col-por-ejec">' + fmtM(porEjec) + '</td>'
       + '<td class="bva-col-presup">' + fmtM(presupTotalARS) + '</td>'
       + '<td class="bva-col-nopres">' + fmtM(noPresup) + '</td>'
-      + '<td class="bva-col-total">' + fmtM(presupTotalARS + noPresup) + '</td>'
+      + '<td class="bva-col-total">' + fmtM(isCat ? (presupEjec + noPresup) : (presupTotalARS + noPresup)) + '</td>'
       + '</tr>';
   }
 
