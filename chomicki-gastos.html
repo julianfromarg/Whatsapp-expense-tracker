@@ -1664,6 +1664,7 @@ async function subirArchivosPresupuesto(files) {
       console.error('Error insertando registro:', insRes.status, errBody);
       alert(`Archivo subido pero error al guardar registro: ${insRes.status} — ${errBody}`);
     }
+  } // end for
 
   dropzone.innerHTML = originalHtml;
   dropzone.style.pointerEvents = '';
