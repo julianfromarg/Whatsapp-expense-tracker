@@ -143,7 +143,21 @@
   .step-dot.done { background: var(--accent); border-color: var(--accent); color: var(--bg); }
   .step-dot.active { border-color: var(--accent); color: var(--accent); }
 
-  /* FUZZY MATCH */
+  /* PRESUPUESTOS */
+  .pres-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 20px 22px; margin-bottom: 12px; transition: border-color 0.15s; cursor: pointer; }
+  .pres-card:hover { border-color: var(--border2); }
+  .pres-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; gap: 12px; }
+  .pres-name { font-size: 14px; font-weight: 500; color: var(--text); }
+  .pres-meta { font-size: 11px; color: var(--muted); margin-top: 3px; }
+  .pres-progress { margin-bottom: 8px; }
+  .pres-track { height: 5px; background: var(--bg3); border-radius: 3px; overflow: hidden; }
+  .pres-fill { height: 100%; border-radius: 3px; transition: width 0.6s cubic-bezier(0.4,0,0.2,1); }
+  .pres-nums { display: flex; justify-content: space-between; font-size: 11px; margin-top: 6px; }
+  .dash-centro-tab { padding: 5px 14px; border-radius: 20px; cursor: pointer; font-family: var(--mono); font-size: 11px; border: 1px solid var(--border); background: transparent; color: var(--muted); transition: all 0.15s; white-space: nowrap; }
+  .dash-centro-tab:hover { border-color: var(--border2); color: var(--text); }
+  .dash-centro-tab.active { background: rgba(200,181,96,0.1); border-color: var(--accent); color: var(--accent); }
+
+  /* PRESUPUESTOS */
   .prov-wrap { position: relative; }
   .prov-suggestions { position: absolute; top: 100%; left: 0; right: 0; background: var(--bg2); border: 1px solid var(--border2); border-radius: 6px; z-index: 200; max-height: 180px; overflow-y: auto; margin-top: 2px; box-shadow: 0 8px 24px rgba(0,0,0,0.4); }
   .prov-sug-item { padding: 8px 12px; cursor: pointer; font-size: 12px; display: flex; align-items: center; justify-content: space-between; transition: background 0.1s; }
@@ -175,6 +189,7 @@
     <button class="nav-tab" onclick="showPage('gastos')">Gastos</button>
     <button class="nav-tab" onclick="showPage('cargar')">+ Cargar</button>
     <button class="nav-tab" onclick="showPage('historial')">Historial WA</button>
+    <button class="nav-tab" onclick="showPage('presupuestos')">Presupuestos</button>
     <button class="nav-tab" onclick="showPage('config')">⚙ Config</button>
   </div>
   <div class="nav-right">
@@ -185,12 +200,15 @@
 
 <!-- DASHBOARD -->
 <div id="page-dashboard" class="page active">
+  <!-- Centro de costo tabs -->
+  <div id="dashCentroTabs" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:24px"></div>
+  <!-- Content -->
   <div class="metrics" id="metricsRow">
     <div class="loading"><div class="spinner"></div><br>Cargando datos...</div>
   </div>
   <div class="dash-grid">
     <div class="card">
-      <div class="card-title">Gastos por centro de costo</div>
+      <div class="card-title" id="dashBarTitle">Gastos por centro de costo</div>
       <div id="barrasCentro"></div>
     </div>
     <div class="card">
@@ -390,6 +408,113 @@
   </div>
 </div>
 
+<!-- PRESUPUESTOS -->
+<div id="page-presupuestos" class="page">
+  <div style="max-width:1100px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px">
+      <div>
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);margin-bottom:4px">Presupuestos</div>
+        <div id="presupStats" style="font-size:12px;color:var(--muted)"></div>
+      </div>
+      <button class="btn primary" onclick="abrirModalPresupuesto()">+ Nuevo presupuesto</button>
+    </div>
+    <div id="listaPresupuestos">
+      <div class="loading"><div class="spinner"></div><br>Cargando...</div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL NUEVO/EDITAR PRESUPUESTO -->
+<div id="modalPresupuesto" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:600;align-items:center;justify-content:center;padding:20px" onclick="cerrarModalPresupuesto()">
+  <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:12px;width:100%;max-width:520px;padding:28px" onclick="event.stopPropagation()">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+      <div style="font-size:13px;font-weight:500;color:var(--text)" id="modalPresupuestoTitle">Nuevo presupuesto</div>
+      <button onclick="cerrarModalPresupuesto()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:20px;line-height:1">✕</button>
+    </div>
+    <div class="form-grid" style="gap:14px">
+      <div class="form-group full">
+        <label>Nombre *</label>
+        <input type="text" id="pNombre" placeholder="Ej: Materiales agua y cloacas - Corralón Tronador">
+      </div>
+      <div class="form-group">
+        <label>Monto total *</label>
+        <div style="display:flex;gap:8px">
+          <select id="pMoneda" style="width:80px;flex-shrink:0"><option>ARS</option><option>USD</option></select>
+          <input type="number" id="pMonto" placeholder="0">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Centro de costo</label>
+        <select id="pCentro">
+          <option value="">— Sin asignar —</option>
+          <option>Infraestructura agua y cloacas</option>
+          <option>Infraestructura gas</option>
+          <option>Infraestructura electricidad</option>
+          <option>Albañilería / obra civil</option>
+          <option>Honorarios profesionales</option>
+          <option>Trámites / legal</option>
+          <option>Otros</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Proveedor</label>
+        <div class="prov-wrap">
+          <input type="text" id="pProveedor" placeholder="Nombre del proveedor" autocomplete="off" oninput="onProvInput(this,'pProvSug')" onblur="setTimeout(()=>hideSug('pProvSug'),150)">
+          <div class="prov-suggestions" id="pProvSug" style="display:none"></div>
+        </div>
+      </div>
+      <div class="form-group full">
+        <label>Descripción</label>
+        <textarea id="pDesc" placeholder="Detalle del presupuesto..." style="min-height:60px"></textarea>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
+      <button class="btn" onclick="cerrarModalPresupuesto()">Cancelar</button>
+      <button class="btn primary" id="btnGuardarPresupuesto" onclick="guardarPresupuesto()">Guardar presupuesto</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL DETALLE PRESUPUESTO -->
+<div id="modalPresupuestoDetalle" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:600;align-items:center;justify-content:center;padding:20px" onclick="cerrarModalDetallePres()">
+  <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:12px;width:100%;max-width:760px;max-height:90vh;overflow-y:auto;padding:28px" onclick="event.stopPropagation()">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px">
+      <div>
+        <div style="font-size:16px;font-weight:500;color:var(--text)" id="pdNombre"></div>
+        <div style="font-size:12px;color:var(--muted);margin-top:4px" id="pdMeta"></div>
+      </div>
+      <button onclick="cerrarModalDetallePres()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:20px;line-height:1">✕</button>
+    </div>
+    <!-- Progress bar -->
+    <div style="background:var(--bg3);border-radius:8px;padding:16px 18px;margin-bottom:20px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:10px;font-size:12px">
+        <span style="color:var(--muted)">Ejecutado</span>
+        <span id="pdPct" style="color:var(--accent);font-weight:500"></span>
+      </div>
+      <div style="height:8px;background:var(--bg);border-radius:4px;overflow:hidden;margin-bottom:10px">
+        <div id="pdBar" style="height:100%;border-radius:4px;transition:width 0.6s cubic-bezier(0.4,0,0.2,1)"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;font-size:12px">
+        <div><div style="color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:2px">Presupuestado</div><div id="pdTotal" style="color:var(--text);font-weight:500"></div></div>
+        <div><div style="color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:2px">Ejecutado</div><div id="pdEjecutado" style="color:var(--accent);font-weight:500"></div></div>
+        <div><div style="color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:2px">Saldo</div><div id="pdSaldo" style="font-weight:500"></div></div>
+      </div>
+    </div>
+    <!-- Gastos asignados -->
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted)">Gastos asignados</div>
+      <button class="btn" onclick="abrirAsignador()" style="font-size:11px;padding:4px 10px">+ Asignar gastos</button>
+    </div>
+    <div id="pdGastos"></div>
+    <!-- Asignador -->
+    <div id="asignadorWrap" style="display:none;margin-top:16px;border-top:1px solid var(--border);padding-top:16px">
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:10px">Gastos sin presupuesto asignado</div>
+      <input type="text" id="asignadorBuscar" placeholder="Buscar por descripción o proveedor..." oninput="filtrarAsignador()" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:8px 12px;color:var(--text);font-family:var(--mono);font-size:12px;margin-bottom:10px">
+      <div id="asignadorLista" style="max-height:260px;overflow-y:auto;border:1px solid var(--border);border-radius:6px"></div>
+    </div>
+  </div>
+</div>
+
 <!-- CONFIG -->
 <div id="page-config" class="page">
   <div style="max-width:900px">
@@ -466,6 +591,7 @@ async function fetchGastos() {
 async function cargarTodo() {
   allGastos = await fetchGastos();
   filtrados = [...allGastos];
+  renderDashboardTabs();
   renderDashboard();
   renderTabla();
   cargarConfig();
@@ -479,84 +605,102 @@ function showPage(name) {
   event.target.classList.add('active');
   if (name === 'gastos') renderTabla();
   if (name === 'config') cargarConfig();
+  if (name === 'presupuestos') cargarPresupuestos();
 }
 
 // ---- DASHBOARD ----
+let dashCentroActivo = null;
+
+function renderDashboardTabs() {
+  const centros = ['Infraestructura agua y cloacas','Infraestructura gas','Infraestructura electricidad','Albañilería / obra civil','Honorarios profesionales','Trámites / legal','Otros'];
+  const abrev = {'Infraestructura agua y cloacas':'Agua y cloacas','Infraestructura gas':'Gas','Infraestructura electricidad':'Electricidad','Albañilería / obra civil':'Albañilería','Honorarios profesionales':'Honorarios','Trámites / legal':'Trámites','Otros':'Otros'};
+  const tabs = [['Resumen', null], ...centros.map(c => [abrev[c]||c, c])];
+  document.getElementById('dashCentroTabs').innerHTML = tabs.map(([label, val]) => {
+    const isActive = dashCentroActivo === val;
+    const onclick = val ? `seleccionarCentroDash('${val.replace(/'/g,"\'")}')` : 'seleccionarCentroDash(null)';
+    return `<button class="dash-centro-tab ${isActive?'active':''}" onclick="${onclick}">${label}</button>`;
+  }).join('');
+}
+
+function seleccionarCentroDash(centro) {
+  dashCentroActivo = centro;
+  renderDashboardTabs();
+  renderDashboard();
+}
+
 function renderDashboard() {
-  const total = allGastos.reduce((s, g) => s + (parseFloat(g.monto) || 0), 0);
+  const gastos = dashCentroActivo ? allGastos.filter(g => g.centro_costo === dashCentroActivo) : allGastos;
+  const total = gastos.reduce((s, g) => s + (parseFloat(g.monto) || 0), 0);
   const totalUSD = total / tc;
-  const conComp = allGastos.filter(g => g.imagen_url || g.comprobante).length;
+  const conComp = gastos.filter(g => g.imagen_url || g.comprobante).length;
 
   document.getElementById('metricsRow').innerHTML = `
-    <div class="metric"><div class="metric-label">Total invertido</div><div class="metric-value">$${Math.round(total).toLocaleString('es-AR')}</div><div class="metric-sub">≈ USD ${Math.round(totalUSD).toLocaleString('es-AR')}</div></div>
-    <div class="metric"><div class="metric-label">Cantidad de gastos</div><div class="metric-value">${allGastos.length}</div><div class="metric-sub">${conComp} con comprobante</div></div>
-    <div class="metric"><div class="metric-label">Promedio por gasto</div><div class="metric-value">$${allGastos.length ? Math.round(total/allGastos.length).toLocaleString('es-AR') : 0}</div></div>
-    <div class="metric"><div class="metric-label">Último registro</div><div class="metric-value" style="font-size:16px">${allGastos[0] ? fmtFecha(allGastos[0].fecha) : '—'}</div><div class="metric-sub">${allGastos[0]?.descripcion?.substring(0,30) || ''}</div></div>
+    <div class="metric"><div class="metric-label">Total ${dashCentroActivo ? 'en este centro' : 'invertido'}</div><div class="metric-value">$${Math.round(total).toLocaleString('es-AR')}</div><div class="metric-sub">≈ USD ${Math.round(totalUSD).toLocaleString('es-AR')}</div></div>
+    <div class="metric"><div class="metric-label">Cantidad de gastos</div><div class="metric-value">${gastos.length}</div><div class="metric-sub">${conComp} con comprobante</div></div>
+    <div class="metric"><div class="metric-label">Promedio por gasto</div><div class="metric-value">$${gastos.length ? Math.round(total/gastos.length).toLocaleString('es-AR') : 0}</div></div>
+    <div class="metric"><div class="metric-label">Último registro</div><div class="metric-value" style="font-size:16px">${gastos[0] ? fmtFecha(gastos[0].fecha) : '—'}</div><div class="metric-sub">${gastos[0]?.descripcion?.substring(0,30) || ''}</div></div>
   `;
 
-  // Barras por centro de costo
-  const byCentro = {};
-  allGastos.forEach(g => {
-    const k = g.centro_costo || 'Otros';
-    byCentro[k] = (byCentro[k] || 0) + (parseFloat(g.monto) || 0);
-  });
-  const maxCentro = Math.max(...Object.values(byCentro));
-  const centroHtml = Object.entries(byCentro).sort((a,b) => b[1]-a[1]).map(([k,v]) => `
-    <div class="bar-item" style="cursor:pointer" onclick="filtrarPorCentro('${k.replace(/'/g,"\\'")}')">
-      <div class="bar-label" style="width:220px;font-size:13px">${k}</div>
-      <div class="bar-track"><div class="bar-fill" style="width:${maxCentro ? (v/maxCentro*100) : 0}%"></div></div>
-      <div class="bar-amt" style="width:120px">$${(v/1000000).toLocaleString('es-AR', {minimumFractionDigits:2, maximumFractionDigits:2})}M</div>
-    </div>`).join('');
-  document.getElementById('barrasCentro').innerHTML = centroHtml || '<div style="color:var(--muted);font-size:12px">Sin datos</div>';
+  if (!dashCentroActivo) {
+    document.getElementById('dashBarTitle').textContent = 'Gastos por centro de costo';
+    const byCentro = {};
+    allGastos.forEach(g => { const k = g.centro_costo || 'Otros'; byCentro[k] = (byCentro[k]||0) + (parseFloat(g.monto)||0); });
+    const maxC = Math.max(...Object.values(byCentro), 1);
+    document.getElementById('barrasCentro').innerHTML = Object.entries(byCentro).sort((a,b)=>b[1]-a[1]).map(([k,v]) =>
+      `<div class="bar-item" style="cursor:pointer" onclick="seleccionarCentroDash('${k.replace(/'/g,"\'")}')">
+        <div class="bar-label" style="width:220px;font-size:13px">${k}</div>
+        <div class="bar-track"><div class="bar-fill" style="width:${v/maxC*100}%"></div></div>
+        <div class="bar-amt" style="width:120px">$${(v/1000000).toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2})}M</div>
+      </div>`).join('') || '<div style="color:var(--muted);font-size:12px">Sin datos</div>';
+  } else {
+    document.getElementById('dashBarTitle').textContent = 'Gastos por categoría';
+    const byCat2 = {};
+    gastos.forEach(g => { const k = g.categoria||'Otro'; byCat2[k] = (byCat2[k]||0)+(parseFloat(g.monto)||0); });
+    const maxC2 = Math.max(...Object.values(byCat2), 1);
+    document.getElementById('barrasCentro').innerHTML = Object.entries(byCat2).sort((a,b)=>b[1]-a[1]).map(([k,v]) =>
+      `<div class="bar-item">
+        <div class="bar-label" style="width:160px;font-size:13px">${k}</div>
+        <div class="bar-track"><div class="bar-fill" style="width:${v/maxC2*100}%;background:var(--blue)"></div></div>
+        <div class="bar-amt" style="width:150px">$${Math.round(v).toLocaleString('es-AR')}</div>
+      </div>`).join('') || '<div style="color:var(--muted);font-size:12px">Sin gastos en este centro</div>';
+  }
 
-  // Donut por categoría
   const byCat = {};
-  allGastos.forEach(g => { const k = g.categoria || 'Otro'; byCat[k] = (byCat[k] || 0) + (parseFloat(g.monto) || 0); });
-  const cats = Object.entries(byCat).sort((a,b) => b[1]-a[1]);
+  gastos.forEach(g => { const k = g.categoria||'Otro'; byCat[k] = (byCat[k]||0)+(parseFloat(g.monto)||0); });
+  const cats = Object.entries(byCat).sort((a,b)=>b[1]-a[1]);
   const colors = ['#c8b560','#6ab0d4','#5db87a','#e05a5a','#b07cc8','#e0905a','#888882'];
-  const totalCat = cats.reduce((s,[,v]) => s+v, 0);
+  const totalCat = cats.reduce((s,[,v])=>s+v,0);
   let startAngle = -Math.PI/2;
-  const r = 60, cx = 75, cy = 75;
-  const paths = cats.map(([,v], i) => {
-    const angle = (v/totalCat) * 2 * Math.PI;
-    const x1 = cx + r * Math.cos(startAngle);
-    const y1 = cy + r * Math.sin(startAngle);
+  const r=60, cx=75, cy=75;
+  const paths = cats.map(([,v],i) => {
+    const angle = (v/totalCat)*2*Math.PI;
+    const x1=cx+r*Math.cos(startAngle), y1=cy+r*Math.sin(startAngle);
     startAngle += angle;
-    const x2 = cx + r * Math.cos(startAngle);
-    const y2 = cy + r * Math.sin(startAngle);
-    const large = angle > Math.PI ? 1 : 0;
-    const path = `M${cx},${cy} L${x1},${y1} A${r},${r} 0 ${large},1 ${x2},${y2} Z`;
-    return `<path d="${path}" fill="${colors[i % colors.length]}" opacity="0.85"/>`;
+    const x2=cx+r*Math.cos(startAngle), y2=cy+r*Math.sin(startAngle);
+    return `<path d="M${cx},${cy} L${x1},${y1} A${r},${r} 0 ${angle>Math.PI?1:0},1 ${x2},${y2} Z" fill="${colors[i%colors.length]}" opacity="0.85"/>`;
   }).join('');
-  const legend = cats.slice(0,6).map(([k,v], i) => `
-    <div class="legend-item">
-      <div class="legend-dot" style="background:${colors[i % colors.length]}"></div>
-      <span style="color:var(--muted)">${k}</span>
-      <span style="margin-left:auto;color:var(--text)">${totalCat ? Math.round(v/totalCat*100) : 0}%</span>
-    </div>`).join('');
+  const legend = cats.slice(0,6).map(([k,v],i) =>
+    `<div class="legend-item"><div class="legend-dot" style="background:${colors[i%colors.length]}"></div><span style="color:var(--muted)">${k}</span><span style="margin-left:auto;color:var(--text)">${totalCat?Math.round(v/totalCat*100):0}%</span></div>`).join('');
   document.getElementById('donutCat').innerHTML = cats.length ? `
     <div style="display:flex;flex-direction:column;gap:12px">
       <div style="display:flex;justify-content:center">
         <svg class="donut" width="120" height="120" viewBox="0 0 150 150">
-          <circle cx="${cx}" cy="${cy}" r="30" fill="var(--bg2)"/>
-          ${paths}
-          <circle cx="${cx}" cy="${cy}" r="30" fill="var(--bg2)"/>
+          <circle cx="${cx}" cy="${cy}" r="30" fill="var(--bg2)"/>${paths}<circle cx="${cx}" cy="${cy}" r="30" fill="var(--bg2)"/>
         </svg>
       </div>
       <div>${legend}</div>
     </div>` : '<div style="color:var(--muted);font-size:12px">Sin datos</div>';
 
-  // Últimos gastos
-  const ultimos = allGastos.slice(0, 8);
-  document.getElementById('ultimosCount').textContent = `(${allGastos.length} total)`;
-  document.getElementById('ultimosGastos').innerHTML = ultimos.map(g => `
-    <div class="recent-item">
+  const ultimos = gastos.slice(0,8);
+  document.getElementById('ultimosCount').textContent = `(${gastos.length} ${dashCentroActivo?'en este centro':'total'})`;
+  document.getElementById('ultimosGastos').innerHTML = ultimos.map(g =>
+    `<div class="recent-item" style="cursor:pointer" onclick="abrirDetalle('${g.id}')">
       <div class="recent-dot"></div>
       <div class="recent-info">
-        <div class="recent-desc">${g.descripcion || '—'}</div>
-        <div class="recent-meta">${fmtFecha(g.fecha)} · ${g.proveedor || g.pagado_por || '—'} · ${g.centro_costo || ''}</div>
+        <div class="recent-desc">${g.descripcion||'—'}</div>
+        <div class="recent-meta">${fmtFecha(g.fecha)} · ${g.proveedor||g.pagado_por||'—'}${dashCentroActivo?'':' · '+(g.centro_costo||'')}</div>
       </div>
-      <div class="recent-monto">${g.moneda === 'USD' ? 'USD ' : '$'}${parseFloat(g.monto || 0).toLocaleString('es-AR')}</div>
+      <div class="recent-monto">${g.moneda==='USD'?'USD ':'$'}${parseFloat(g.monto||0).toLocaleString('es-AR')}</div>
     </div>`).join('') || '<div style="color:var(--muted);padding:16px 0">Sin gastos cargados aún</div>';
 }
 
@@ -1105,7 +1249,13 @@ function cerrarModal() {
   document.body.style.overflow = '';
 }
 
-document.addEventListener('keydown', e => { if (e.key === 'Escape') cerrarModal(); });
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    cerrarModal();
+    cerrarModalPresupuesto();
+    cerrarModalDetallePres();
+  }
+});
 
 // ---- EDITAR CENTRO COSTO ----
 async function actualizarCentro(id, valor) {
@@ -1120,6 +1270,264 @@ async function actualizarCampo(id, campo, valor) {
   });
   const g = allGastos.find(x => x.id === id);
   if (g) g[campo] = valor;
+}
+
+// ---- PRESUPUESTOS ----
+let allPresupuestos = [];
+let presupuestoActivo = null; // for detail modal
+
+async function fetchPresupuestos() {
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/constructora_presupuestos?select=*&order=created_at.desc`, {
+    headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+  });
+  return await r.json();
+}
+
+async function cargarPresupuestos() {
+  document.getElementById('listaPresupuestos').innerHTML = '<div class="loading"><div class="spinner"></div><br>Cargando...</div>';
+  allPresupuestos = await fetchPresupuestos();
+  renderPresupuestos();
+}
+
+function getEjecutado(presId) {
+  return allGastos.filter(g => g.presupuesto_id === presId).reduce((s,g) => s+(parseFloat(g.monto)||0), 0);
+}
+
+function renderPresupuestos() {
+  const container = document.getElementById('listaPresupuestos');
+  if (!allPresupuestos.length) {
+    container.innerHTML = '<div style="color:var(--muted);padding:32px;text-align:center;border:1px dashed var(--border);border-radius:10px">No hay presupuestos cargados.<br><span style="font-size:12px">Hacé click en "+ Nuevo presupuesto" para empezar.</span></div>';
+    document.getElementById('presupStats').textContent = '';
+    return;
+  }
+  const totalPres = allPresupuestos.reduce((s,p) => s+(parseFloat(p.monto_total)||0), 0);
+  const totalEjec = allPresupuestos.reduce((s,p) => s+getEjecutado(p.id), 0);
+  const pct = totalPres ? Math.round(totalEjec/totalPres*100) : 0;
+  document.getElementById('presupStats').textContent = `${allPresupuestos.length} presupuestos · $${Math.round(totalPres).toLocaleString('es-AR')} total · ${pct}% ejecutado`;
+
+  container.innerHTML = allPresupuestos.map(p => {
+    const ejecutado = getEjecutado(p.id);
+    const pct = p.monto_total ? Math.min(ejecutado/p.monto_total*100, 100) : 0;
+    const overBudget = ejecutado > p.monto_total;
+    const saldo = parseFloat(p.monto_total) - ejecutado;
+    const barColor = overBudget ? 'var(--red)' : pct > 80 ? '#e0905a' : 'var(--accent)';
+    const nGastos = allGastos.filter(g => g.presupuesto_id === p.id).length;
+    return `
+      <div class="pres-card" onclick="abrirDetallePres('${p.id}')">
+        <div class="pres-header">
+          <div>
+            <div class="pres-name">${p.nombre}</div>
+            <div class="pres-meta">${[p.centro_costo, p.proveedor].filter(Boolean).join(' · ') || 'Sin categorizar'} · ${nGastos} gasto${nGastos!==1?'s':''}</div>
+          </div>
+          <div style="text-align:right;flex-shrink:0">
+            <div style="font-size:18px;font-weight:500;color:${barColor}">${Math.round(pct)}%</div>
+            <div style="font-size:11px;color:var(--muted)">ejecutado</div>
+          </div>
+        </div>
+        <div class="pres-progress">
+          <div class="pres-track"><div class="pres-fill" style="width:${pct}%;background:${barColor}"></div></div>
+        </div>
+        <div class="pres-nums">
+          <span style="color:var(--muted)">Presupuesto: <span style="color:var(--text)">$${Math.round(parseFloat(p.monto_total)).toLocaleString('es-AR')}</span></span>
+          <span style="color:var(--muted)">Ejecutado: <span style="color:var(--accent)">$${Math.round(ejecutado).toLocaleString('es-AR')}</span></span>
+          <span style="color:var(--muted)">Saldo: <span style="color:${saldo<0?'var(--red)':'var(--green)'}">$${Math.round(saldo).toLocaleString('es-AR')}</span></span>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function abrirModalPresupuesto(id) {
+  const modal = document.getElementById('modalPresupuesto');
+  if (id) {
+    const p = allPresupuestos.find(x => x.id === id);
+    if (!p) return;
+    document.getElementById('modalPresupuestoTitle').textContent = 'Editar presupuesto';
+    document.getElementById('pNombre').value = p.nombre || '';
+    document.getElementById('pMoneda').value = p.moneda || 'ARS';
+    document.getElementById('pMonto').value = p.monto_total || '';
+    document.getElementById('pCentro').value = p.centro_costo || '';
+    document.getElementById('pProveedor').value = p.proveedor || '';
+    document.getElementById('pDesc').value = p.descripcion || '';
+    document.getElementById('btnGuardarPresupuesto').onclick = () => guardarPresupuesto(id);
+  } else {
+    document.getElementById('modalPresupuestoTitle').textContent = 'Nuevo presupuesto';
+    ['pNombre','pMonto','pProveedor','pDesc'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('pMoneda').value = 'ARS';
+    document.getElementById('pCentro').value = '';
+    document.getElementById('btnGuardarPresupuesto').onclick = () => guardarPresupuesto(null);
+  }
+  modal.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+
+function cerrarModalPresupuesto() {
+  document.getElementById('modalPresupuesto').style.display = 'none';
+  document.body.style.overflow = '';
+}
+
+async function guardarPresupuesto(id) {
+  const nombre = document.getElementById('pNombre').value.trim();
+  const monto = parseFloat(document.getElementById('pMonto').value);
+  if (!nombre || !monto) { alert('Completá nombre y monto.'); return; }
+
+  const body = {
+    nombre,
+    monto_total: monto,
+    moneda: document.getElementById('pMoneda').value,
+    centro_costo: document.getElementById('pCentro').value || null,
+    proveedor: document.getElementById('pProveedor').value.trim() || null,
+    descripcion: document.getElementById('pDesc').value.trim() || null,
+  };
+
+  const btn = document.getElementById('btnGuardarPresupuesto');
+  btn.textContent = 'Guardando...'; btn.disabled = true;
+
+  const url = id
+    ? `${SUPABASE_URL}/rest/v1/constructora_presupuestos?id=eq.${id}`
+    : `${SUPABASE_URL}/rest/v1/constructora_presupuestos`;
+  const method = id ? 'PATCH' : 'POST';
+
+  const r = await fetch(url, {
+    method,
+    headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+    body: JSON.stringify(body)
+  });
+
+  btn.textContent = 'Guardar presupuesto'; btn.disabled = false;
+  if (r.ok) {
+    cerrarModalPresupuesto();
+    await cargarPresupuestos();
+  } else {
+    alert('Error al guardar. Intentá de nuevo.');
+  }
+}
+
+async function eliminarPresupuesto(id) {
+  if (!confirm('¿Eliminar este presupuesto? Los gastos asignados quedarán sin presupuesto.')) return;
+  await fetch(`${SUPABASE_URL}/rest/v1/constructora_presupuestos?id=eq.${id}`, {
+    method: 'DELETE',
+    headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+  });
+  // unlink gastos locally
+  allGastos.forEach(g => { if (g.presupuesto_id === id) g.presupuesto_id = null; });
+  await cargarPresupuestos();
+}
+
+function abrirDetallePres(id) {
+  const p = allPresupuestos.find(x => x.id === id);
+  if (!p) return;
+  presupuestoActivo = p;
+
+  const ejecutado = getEjecutado(id);
+  const pct = p.monto_total ? Math.min(ejecutado/p.monto_total*100, 100) : 0;
+  const overBudget = ejecutado > parseFloat(p.monto_total);
+  const saldo = parseFloat(p.monto_total) - ejecutado;
+  const barColor = overBudget ? 'var(--red)' : pct > 80 ? '#e0905a' : 'var(--accent)';
+
+  document.getElementById('pdNombre').textContent = p.nombre;
+  document.getElementById('pdMeta').textContent = [p.centro_costo, p.proveedor, p.descripcion].filter(Boolean).join(' · ');
+  document.getElementById('pdPct').textContent = Math.round(pct) + '% ejecutado';
+  document.getElementById('pdBar').style.width = pct + '%';
+  document.getElementById('pdBar').style.background = barColor;
+  document.getElementById('pdTotal').textContent = '$' + Math.round(parseFloat(p.monto_total)).toLocaleString('es-AR');
+  document.getElementById('pdEjecutado').textContent = '$' + Math.round(ejecutado).toLocaleString('es-AR');
+  document.getElementById('pdSaldo').textContent = '$' + Math.round(saldo).toLocaleString('es-AR');
+  document.getElementById('pdSaldo').style.color = saldo < 0 ? 'var(--red)' : 'var(--green)';
+
+  // Gastos asignados
+  const gastosAsig = allGastos.filter(g => g.presupuesto_id === id);
+  document.getElementById('pdGastos').innerHTML = gastosAsig.length
+    ? `<table style="width:100%"><thead><tr>
+        <th>Fecha</th><th>Descripción</th><th>Proveedor</th><th style="text-align:right">Monto</th><th></th>
+      </tr></thead><tbody>${gastosAsig.map(g => `<tr>
+        <td style="white-space:nowrap;font-size:12px">${fmtFecha(g.fecha)}</td>
+        <td style="font-size:12px;max-width:260px">${g.descripcion||'—'}</td>
+        <td style="font-size:12px;color:var(--muted)">${g.proveedor||'—'}</td>
+        <td style="text-align:right;font-size:12px;color:var(--accent);white-space:nowrap">$${parseFloat(g.monto||0).toLocaleString('es-AR')}</td>
+        <td><button onclick="desasignarGasto('${g.id}')" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:13px;padding:2px 6px" title="Desasignar">✕</button></td>
+      </tr>`).join('')}</tbody></table>`
+    : '<div style="color:var(--muted);font-size:13px;padding:12px 0">Sin gastos asignados aún.</div>';
+
+  // Botones editar/eliminar
+  document.getElementById('pdGastos').innerHTML += `
+    <div style="display:flex;gap:8px;margin-top:16px;padding-top:12px;border-top:1px solid var(--border)">
+      <button class="btn" onclick="abrirModalPresupuesto('${id}')" style="font-size:11px;padding:4px 12px">✏ Editar presupuesto</button>
+      <button class="btn" onclick="eliminarPresupuesto('${id}');cerrarModalDetallePres()" style="font-size:11px;padding:4px 12px;color:var(--red);border-color:rgba(224,90,90,0.3)">🗑 Eliminar</button>
+    </div>`;
+
+  document.getElementById('asignadorWrap').style.display = 'none';
+  document.getElementById('modalPresupuestoDetalle').style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+
+function cerrarModalDetallePres() {
+  document.getElementById('modalPresupuestoDetalle').style.display = 'none';
+  document.body.style.overflow = '';
+  presupuestoActivo = null;
+}
+
+async function desasignarGasto(gastoId) {
+  await fetch(`${SUPABASE_URL}/rest/v1/constructora_gastos?id=eq.${gastoId}`, {
+    method: 'PATCH',
+    headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+    body: JSON.stringify({ presupuesto_id: null })
+  });
+  const g = allGastos.find(x => x.id === gastoId);
+  if (g) g.presupuesto_id = null;
+  abrirDetallePres(presupuestoActivo.id);
+  renderPresupuestos();
+}
+
+function abrirAsignador() {
+  const wrap = document.getElementById('asignadorWrap');
+  wrap.style.display = wrap.style.display === 'none' ? 'block' : 'none';
+  if (wrap.style.display === 'block') filtrarAsignador();
+}
+
+function filtrarAsignador() {
+  const buscar = (document.getElementById('asignadorBuscar').value || '').toLowerCase();
+  const sinAsignar = allGastos.filter(g => !g.presupuesto_id);
+  const p = presupuestoActivo;
+
+  // Suggest matching centro/proveedor first, then rest
+  const scored = sinAsignar.map(g => {
+    let score = 0;
+    if (p.centro_costo && g.centro_costo === p.centro_costo) score += 2;
+    if (p.proveedor && g.proveedor === p.proveedor) score += 3;
+    return { g, score };
+  }).sort((a,b) => b.score - a.score);
+
+  const filtrado = scored.filter(({g}) => {
+    if (!buscar) return true;
+    return (g.descripcion||'').toLowerCase().includes(buscar) || (g.proveedor||'').toLowerCase().includes(buscar);
+  });
+
+  document.getElementById('asignadorLista').innerHTML = filtrado.length
+    ? filtrado.map(({g, score}) => `
+      <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid var(--border);transition:background 0.1s" onmouseover="this.style.background='rgba(200,181,96,0.06)'" onmouseout="this.style.background='transparent'">
+        ${score>0 ? '<span style="font-size:10px;color:var(--accent);background:rgba(200,181,96,0.1);padding:1px 5px;border-radius:3px;flex-shrink:0">sugerido</span>' : '<span style="width:55px;flex-shrink:0"></span>'}
+        <div style="flex:1;min-width:0">
+          <div style="font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${g.descripcion||'—'}</div>
+          <div style="font-size:11px;color:var(--muted)">${fmtFecha(g.fecha)} · ${g.proveedor||'—'}</div>
+        </div>
+        <div style="font-size:12px;color:var(--accent);white-space:nowrap;margin-right:8px">$${parseFloat(g.monto||0).toLocaleString('es-AR')}</div>
+        <button class="btn primary" onclick="asignarGasto('${g.id}')" style="font-size:11px;padding:3px 10px;white-space:nowrap">Asignar</button>
+      </div>`).join('')
+    : '<div style="padding:16px;text-align:center;color:var(--muted);font-size:12px">Sin gastos disponibles para asignar</div>';
+}
+
+async function asignarGasto(gastoId) {
+  if (!presupuestoActivo) return;
+  await fetch(`${SUPABASE_URL}/rest/v1/constructora_gastos?id=eq.${gastoId}`, {
+    method: 'PATCH',
+    headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+    body: JSON.stringify({ presupuesto_id: presupuestoActivo.id })
+  });
+  const g = allGastos.find(x => x.id === gastoId);
+  if (g) g.presupuesto_id = presupuestoActivo.id;
+  abrirDetallePres(presupuestoActivo.id);
+  renderPresupuestos();
+  filtrarAsignador();
 }
 
 // ---- FUZZY MATCH ----
