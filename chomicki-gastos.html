@@ -842,21 +842,21 @@ function renderBvaTable() {
     const rowClass = isTotal ? 'bva-total' : isCat ? 'bva-cat' : '';
     return '<tr class="' + rowClass + '">'
       + '<td>' + label + '</td>'
-      + '<td class="bva-col-presup">' + fmtM(presupTotalARS) + '</td>'
       + '<td class="bva-col-ejec">' + fmtM(presupEjec) + '</td>'
       + '<td class="bva-col-por-ejec">' + fmtM(porEjec) + '</td>'
+      + '<td class="bva-col-presup">' + fmtM(presupTotalARS) + '</td>'
       + '<td class="bva-col-nopres">' + fmtM(noPresup) + '</td>'
-      + '<td class="bva-col-total">' + fmtM(total) + '</td>'
+      + '<td class="bva-col-total">' + fmtM(presupEjec + noPresup) + '</td>'
       + '</tr>';
   }
 
   const headers = '<thead><tr>'
     + '<th style="width:200px">Centro / Categoría</th>'
-    + '<th title="Suma de todos los presupuestos del centro">Presup. Total</th>'
     + '<th title="Gastos con presupuesto asignado">Presup. Ejecutado</th>'
-    + '<th title="Presupuesto Total menos Ejecutado">Por Ejecutar</th>'
+    + '<th title="Presupuesto Total menos Ejecutado — saldo futuro">Por Ejecutar</th>'
+    + '<th title="Suma de todos los presupuestos del centro">Presup. Total</th>'
     + '<th title="Gastos sin presupuesto asignado">No Presup.</th>'
-    + '<th title="Total general del centro">Total</th>'
+    + '<th title="Presup. Ejecutado + No Presup.">Total</th>'
     + '</tr></thead>';
 
   let rows = '';
