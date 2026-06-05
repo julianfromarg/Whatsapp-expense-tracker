@@ -742,31 +742,29 @@ function renderDashboard() {
     const presContainer = document.getElementById('dashPresupuestos');
     if (presDelCentro.length) {
       presContainer.style.display = 'block';
-      presContainer.innerHTML = `
-        <div class="card" style="margin-bottom:20px">
-          <div class="card-title">Presupuestos del centro</div>
-          ${presDelCentro.map(p => {
-            const presARS = presupuestoEnARS(p);
-            const ejecARS = getEjecutadoARS(p.id);
-            const saldoARS = presARS - ejecARS;
-            const pct = presARS > 0 ? Math.min(Math.round(ejecARS / presARS * 100), 100) : 0;
-            const ejecDisp = fmtMonto(arsAMonedaPres(ejecARS, p.moneda), p.moneda);
-            const saldoDisp = fmtMonto(Math.abs(arsAMonedaPres(saldoARS, p.moneda)), p.moneda);
-            const fillColor = pct >= 100 ? 'var(--red)' : pct >= 80 ? '#e0905a' : 'var(--green)';
-            return \`<div style="margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--border);cursor:pointer" onclick="showPage('presupuestos');setTimeout(()=>abrirDetallePres('\${p.id}'),300)" title="Ver detalle del presupuesto">
-              <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px">
-                <span style="font-size:13px;font-weight:500">\${p.nombre}</span>
-                <span style="font-size:11px;color:var(--muted)">\${pct}% ejecutado</span>
-              </div>
-              <div class="pres-track" style="margin-bottom:8px"><div class="pres-fill" style="width:\${pct}%;background:\${fillColor}"></div></div>
-              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;font-size:11px">
-                <div><div style="color:var(--muted);margin-bottom:2px;text-transform:uppercase;font-size:10px;letter-spacing:.06em">Presupuestado</div><div style="font-family:'IBM Plex Mono',monospace">\${fmtMonto(parseFloat(p.monto_total), p.moneda)}</div></div>
-                <div><div style="color:var(--muted);margin-bottom:2px;text-transform:uppercase;font-size:10px;letter-spacing:.06em">Ejecutado</div><div style="font-family:'IBM Plex Mono',monospace;color:\${fillColor}">\${ejecDisp}</div></div>
-                <div><div style="color:var(--muted);margin-bottom:2px;text-transform:uppercase;font-size:10px;letter-spacing:.06em">Saldo</div><div style="font-family:'IBM Plex Mono',monospace;color:\${saldoARS < 0 ? 'var(--red)' : 'var(--text)'}">\${saldoARS < 0 ? '–' : ''}\${saldoDisp}</div></div>
-              </div>
-            </div>\`;
-          }).join('')}
-        </div>`;
+      const filas = presDelCentro.map(function(p) {
+        const presARS = presupuestoEnARS(p);
+        const ejecARS = getEjecutadoARS(p.id);
+        const saldoARS = presARS - ejecARS;
+        const pct = presARS > 0 ? Math.min(Math.round(ejecARS / presARS * 100), 100) : 0;
+        const ejecDisp = fmtMonto(arsAMonedaPres(ejecARS, p.moneda), p.moneda);
+        const saldoDisp = fmtMonto(Math.abs(arsAMonedaPres(saldoARS, p.moneda)), p.moneda);
+        const fillColor = pct >= 100 ? 'var(--red)' : pct >= 80 ? '#e0905a' : 'var(--green)';
+        const saldoColor = saldoARS < 0 ? 'var(--red)' : 'var(--text)';
+        const saldoPrefix = saldoARS < 0 ? '–' : '';
+        return '<div style="margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--border);cursor:pointer" onclick="showPage(\'presupuestos\');setTimeout(function(){abrirDetallePres(\'' + p.id + '\')},300)" title="Ver detalle del presupuesto">'
+          + '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px">'
+          + '<span style="font-size:13px;font-weight:500">' + p.nombre + '</span>'
+          + '<span style="font-size:11px;color:var(--muted)">' + pct + '% ejecutado</span>'
+          + '</div>'
+          + '<div class="pres-track" style="margin-bottom:8px"><div class="pres-fill" style="width:' + pct + '%;background:' + fillColor + '"></div></div>'
+          + '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;font-size:11px">'
+          + '<div><div style="color:var(--muted);margin-bottom:2px;text-transform:uppercase;font-size:10px;letter-spacing:.06em">Presupuestado</div><div style="font-family:\'IBM Plex Mono\',monospace">' + fmtMonto(parseFloat(p.monto_total), p.moneda) + '</div></div>'
+          + '<div><div style="color:var(--muted);margin-bottom:2px;text-transform:uppercase;font-size:10px;letter-spacing:.06em">Ejecutado</div><div style="font-family:\'IBM Plex Mono\',monospace;color:' + fillColor + '">' + ejecDisp + '</div></div>'
+          + '<div><div style="color:var(--muted);margin-bottom:2px;text-transform:uppercase;font-size:10px;letter-spacing:.06em">Saldo</div><div style="font-family:\'IBM Plex Mono\',monospace;color:' + saldoColor + '">' + saldoPrefix + saldoDisp + '</div></div>'
+          + '</div></div>';
+      }).join('');
+      presContainer.innerHTML = '<div class="card" style="margin-bottom:20px"><div class="card-title">Presupuestos del centro</div>' + filas + '</div>';
     } else {
       presContainer.style.display = 'none';
     }
