@@ -1,4 +1,4 @@
-# Chomicki Constructora — Context Document v5
+# Chomicki Constructora — Context Document v6
 
 ## Resumen del proyecto
 
@@ -152,14 +152,14 @@ Materiales, Mano de obra, Honorarios, Servicios, Transporte, Impuestos/Tasas, Ad
 ### Tab: Dashboard
 - **Tabs de centro de costo** en la parte superior: "Resumen" + uno por cada centro de costo
   - **Resumen:** métricas globales, barras por centro de costo (clickeables → navegan al centro), donut por categoría, últimos 8 gastos
-  - **Centro específico:** métricas filtradas, barras por categoría (en azul), donut y últimos gastos del centro
+  - **Centro específico:** métricas filtradas, barras por categoría (en azul, **clickeables** → abre modal con lista de gastos de esa categoría), donut, últimos gastos del centro, y **sección de presupuestos del centro** (barra de progreso por presupuesto con presupuestado/ejecutado/saldo — click navega al detalle del presupuesto)
   - Click en barra de centro → activa ese tab
 - **Métricas:** total invertido (ARS + equivalente USD), cantidad de gastos, promedio por gasto, último registro
-- **Tipo de cambio blue** en tiempo real (API: bluelytics.com.ar) — usado para conversiones en todo el dashboard
+- **Tipo de cambio blue** en tiempo real (API primaria: **dolarapi.com** `GET /v1/dolares/blue`, fallback: bluelytics.com.ar) — usado para conversiones en todo el dashboard. Bluelytics bloqueaba CORS desde GitHub Pages, por eso se migró a dolarapi.com.
 
 ### Tab: Gastos
 - Tabla completa con todos los gastos, paginación (20 por página)
-- **Filtros:** Año, Mes, Día, Centro de costo, Categoría, Proveedor (texto libre)
+- **Filtros:** Año, Mes, Día, Centro de costo, Categoría, campo de búsqueda libre (busca simultáneamente en proveedor, descripción y categoría)
 - **Ordenable** por cualquier columna
 - Fila de totales filtrados (ARS + USD) al pie
 - **Edición inline por fila:**
@@ -242,7 +242,7 @@ Implementado 100% en el browser, sin APIs externas. Algoritmo: **Levenshtein dis
 ## Manejo de monedas
 
 - Todos los gastos tienen campo `moneda` ('ARS' o 'USD')
-- El tipo de cambio blue (`tc`) se obtiene de bluelytics.com.ar al cargar
+- El tipo de cambio blue (`tc`) se obtiene de **dolarapi.com** (`/v1/dolares/blue`, campo `venta`) al cargar. Fallback: bluelytics.com.ar. Bluelytics no tiene CORS abierto para GitHub Pages.
 - **En dashboard:** total se muestra en ARS + equivalente USD
 - **En tab Gastos:** columna ARS muestra monto, columna USD muestra conversión (o `—` si el gasto ya es USD)
 - **En presupuestos:**
