@@ -846,7 +846,7 @@ function renderBvaTable() {
       + '<td class="bva-col-por-ejec">' + fmtM(porEjec) + '</td>'
       + '<td class="bva-col-presup">' + fmtM(presupTotalARS) + '</td>'
       + '<td class="bva-col-nopres">' + fmtM(noPresup) + '</td>'
-      + '<td class="bva-col-total">' + fmtM(presupEjec + noPresup) + '</td>'
+      + '<td class="bva-col-total">' + fmtM(presupTotalARS + noPresup) + '</td>'
       + '</tr>';
   }
 
@@ -856,7 +856,7 @@ function renderBvaTable() {
     + '<th title="Presupuesto Total menos Ejecutado — saldo futuro">Por Ejecutar</th>'
     + '<th title="Suma de todos los presupuestos del centro">Presup. Total</th>'
     + '<th title="Gastos sin presupuesto asignado">No Presup.</th>'
-    + '<th title="Presup. Ejecutado + No Presup.">Total</th>'
+    + '<th title="Presup. Total + No Presup.">Total</th>'
     + '</tr></thead>';
 
   let rows = '';
