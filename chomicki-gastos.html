@@ -269,7 +269,7 @@
       <option>Administrativo</option>
       <option>Otro</option>
     </select>
-    <input class="filter-input" type="text" id="fProveedor" placeholder="Proveedor..." oninput="aplicarFiltros()" style="width:150px">
+    <input class="filter-input" type="text" id="fProveedor" placeholder="Buscar..." oninput="aplicarFiltros()" style="width:150px" title="Busca en proveedor, descripción y categoría">
     <button class="btn-clear" onclick="limpiarFiltros()">✕ Limpiar</button>
     <span id="filtroCount" style="color:var(--muted);font-size:11px;margin-left:4px"></span>
   </div>
@@ -800,7 +800,7 @@ function aplicarFiltros() {
     }
     if (centro && g.centro_costo !== centro) return false;
     if (cat && g.categoria !== cat) return false;
-    if (prov && !(g.proveedor || '').toLowerCase().includes(prov) && !(g.descripcion || '').toLowerCase().includes(prov)) return false;
+    if (prov && !(g.proveedor || '').toLowerCase().includes(prov) && !(g.descripcion || '').toLowerCase().includes(prov) && !(g.categoria || '').toLowerCase().includes(prov)) return false;
     return true;
   });
 
