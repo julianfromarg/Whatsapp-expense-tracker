@@ -501,6 +501,24 @@
         <div><div style="color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:2px">Saldo</div><div id="pdSaldo" style="font-weight:500"></div></div>
       </div>
     </div>
+    <!-- Archivos -->
+    <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted)">Archivos adjuntos</div>
+      </div>
+      <!-- Dropzone archivos -->
+      <div id="presDropzone" onclick="document.getElementById('presFileInput').click()"
+        ondragover="event.preventDefault();this.style.borderColor='var(--accent)'"
+        ondragleave="this.style.borderColor='var(--border)'"
+        ondrop="event.preventDefault();this.style.borderColor='var(--border)';subirArchivosPresupuesto(event.dataTransfer.files)"
+        style="border:1px dashed var(--border);border-radius:8px;padding:14px;text-align:center;cursor:pointer;transition:border-color 0.15s;margin-bottom:12px">
+        <div style="font-size:20px;margin-bottom:4px">📎</div>
+        <div style="font-size:12px;color:var(--muted)">Arrastrá o hacé click para subir archivos</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px">PDF, Excel, Word, imágenes, texto…</div>
+        <input type="file" id="presFileInput" multiple style="display:none" onchange="subirArchivosPresupuesto(this.files)">
+      </div>
+      <div id="pdArchivos"></div>
+    </div>
     <!-- Gastos asignados -->
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
       <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted)">Gastos asignados</div>
@@ -1476,8 +1494,10 @@ function abrirDetallePres(id) {
     </div>`;
 
   document.getElementById('asignadorWrap').style.display = 'none';
+  document.getElementById('pdArchivos').innerHTML = '<div style="font-size:12px;color:var(--muted)">Cargando...</div>';
   document.getElementById('modalPresupuestoDetalle').style.display = 'flex';
   document.body.style.overflow = 'hidden';
+  cargarArchivosPresupuesto(id);
 }
 
 function cerrarModalDetallePres() {
@@ -1548,6 +1568,111 @@ async function asignarGasto(gastoId) {
   abrirDetallePres(presupuestoActivo.id);
   renderPresupuestos();
   filtrarAsignador();
+}
+
+// ---- ARCHIVOS PRESUPUESTO ----
+const BUCKET_PRES = 'constructora-presupuestos';
+
+function archivoIcono(nombre) {
+  const ext = (nombre.split('.').pop() || '').toLowerCase();
+  if (['pdf'].includes(ext)) return '📄';
+  if (['xls','xlsx','csv'].includes(ext)) return '📊';
+  if (['doc','docx'].includes(ext)) return '📝';
+  if (['jpg','jpeg','png','gif','webp','heic'].includes(ext)) return '🖼';
+  if (['txt','md'].includes(ext)) return '📃';
+  if (['zip','rar','7z'].includes(ext)) return '🗜';
+  return '📎';
+}
+
+function fmtTamanio(bytes) {
+  if (!bytes) return '';
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024*1024) return (bytes/1024).toFixed(1) + ' KB';
+  return (bytes/1024/1024).toFixed(1) + ' MB';
+}
+
+async function cargarArchivosPresupuesto(presId) {
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/constructora_presupuesto_archivos?presupuesto_id=eq.${presId}&order=created_at.asc`, {
+    headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+  });
+  const archivos = await r.json();
+  renderArchivosPresupuesto(archivos);
+}
+
+function renderArchivosPresupuesto(archivos) {
+  const el = document.getElementById('pdArchivos');
+  if (!archivos.length) {
+    el.innerHTML = '<div style="font-size:12px;color:var(--muted);padding:4px 0">Sin archivos adjuntos aún.</div>';
+    return;
+  }
+  el.innerHTML = archivos.map(a => `
+    <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:var(--bg3);border-radius:6px;margin-bottom:6px">
+      <span style="font-size:18px;flex-shrink:0">${archivoIcono(a.nombre_original)}</span>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text)">${a.nombre_original}</div>
+        <div style="font-size:10px;color:var(--muted)">${fmtTamanio(a.tamanio)}</div>
+      </div>
+      <a href="${a.archivo_url}" target="_blank" style="color:var(--accent);font-size:11px;text-decoration:none;flex-shrink:0;padding:3px 8px;border:1px solid rgba(200,181,96,0.3);border-radius:4px" title="Abrir">↗ Abrir</a>
+      <button onclick="eliminarArchivoPresupuesto('${a.id}','${a.nombre_original.replace(/'/g,"\\'")}','${a.presupuesto_id}')"
+        style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:14px;padding:2px 4px;opacity:0.5;transition:opacity 0.15s;flex-shrink:0"
+        onmouseover="this.style.opacity='1';this.style.color='#e05a5a'"
+        onmouseout="this.style.opacity='0.5';this.style.color='var(--muted)'"
+        title="Eliminar">🗑</button>
+    </div>`).join('');
+}
+
+async function subirArchivosPresupuesto(files) {
+  if (!presupuestoActivo || !files.length) return;
+  const dropzone = document.getElementById('presDropzone');
+  const originalHtml = dropzone.innerHTML;
+  dropzone.innerHTML = `<div style="font-size:12px;color:var(--muted);padding:4px 0"><div class="spinner" style="display:inline-block;margin-right:8px"></div>Subiendo ${files.length} archivo${files.length>1?'s':''}...</div>`;
+  dropzone.style.pointerEvents = 'none';
+
+  for (const file of Array.from(files)) {
+    const ext = file.name.split('.').pop();
+    const fileName = `${presupuestoActivo.id}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g,'_')}`;
+
+    // Upload to storage
+    const upRes = await fetch(`${SUPABASE_URL}/storage/v1/object/${BUCKET_PRES}/${fileName}`, {
+      method: 'POST',
+      headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': file.type || 'application/octet-stream', 'x-upsert': 'true' },
+      body: file
+    });
+    if (!upRes.ok) { console.error('Error subiendo', file.name); continue; }
+
+    const url = `${SUPABASE_URL}/storage/v1/object/public/${BUCKET_PRES}/${fileName}`;
+
+    // Insert record
+    await fetch(`${SUPABASE_URL}/rest/v1/constructora_presupuesto_archivos`, {
+      method: 'POST',
+      headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      body: JSON.stringify({
+        presupuesto_id: presupuestoActivo.id,
+        nombre_original: file.name,
+        archivo_url: url,
+        tipo: file.type || ext,
+        tamanio: file.size
+      })
+    });
+  }
+
+  dropzone.innerHTML = originalHtml;
+  dropzone.style.pointerEvents = '';
+  // Re-bind file input change
+  document.getElementById('presFileInput').onchange = (e) => subirArchivosPresupuesto(e.target.files);
+  await cargarArchivosPresupuesto(presupuestoActivo.id);
+}
+
+async function eliminarArchivoPresupuesto(archivoId, nombreOriginal, presId) {
+  if (!confirm(`¿Eliminar "${nombreOriginal}"?`)) return;
+
+  // Delete from DB
+  await fetch(`${SUPABASE_URL}/rest/v1/constructora_presupuesto_archivos?id=eq.${archivoId}`, {
+    method: 'DELETE',
+    headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+  });
+
+  await cargarArchivosPresupuesto(presId);
 }
 
 // ---- FUZZY MATCH ----
