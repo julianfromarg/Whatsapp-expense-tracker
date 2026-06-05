@@ -5,391 +5,173 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Constructora — Dashboard de Gastos</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   :root {
-    --background: hsl(0 0% 100%);
-    --foreground: hsl(220 20% 10%);
-    --card: hsl(0 0% 100%);
-    --surface: hsl(220 20% 98%);
-    --muted: hsl(220 14% 96%);
-    --muted-foreground: hsl(220 10% 46%);
-    --border: hsl(220 13% 91%);
-    --primary: hsl(220 80% 50%);
-    --primary-hover: hsl(220 80% 44%);
-    --gain: hsl(142 71% 45%);
-    --loss: hsl(0 72% 51%);
-    --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --bg: #0f0f0d;
+    --bg2: #181815;
+    --bg3: #1f1f1b;
+    --border: rgba(255,255,255,0.08);
+    --border2: rgba(255,255,255,0.14);
+    --text: #f0ede6;
+    --muted: #888882;
+    --accent: #c8b560;
+    --accent2: #e8d080;
+    --green: #5db87a;
+    --red: #e05a5a;
+    --blue: #6ab0d4;
+    --mono: 'IBM Plex Sans', sans-serif;
+    --serif: 'IBM Plex Mono', monospace;
   }
-
   * { box-sizing: border-box; margin: 0; padding: 0; }
-
-  html { scroll-behavior: smooth; }
-
-  body {
-    background: hsl(var(--background));
-    color: hsl(var(--foreground));
-    font-family: var(--font);
-    font-size: 14px;
-    min-height: 100vh;
-    line-height: 1.6;
-    -webkit-font-smoothing: antialiased;
-    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
-  }
-
-  /* SCROLLBAR */
-  ::-webkit-scrollbar { width: 6px; }
-  ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: hsl(var(--border)); border-radius: 3px; }
-  ::-webkit-scrollbar-thumb:hover { background: hsl(var(--muted-foreground)); }
+  body { background: var(--bg); color: var(--text); font-family: var(--mono); font-size: 14px; min-height: 100vh; line-height: 1.6; }
 
   /* NAV */
-  nav {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 0 32px; height: 56px;
-    border-bottom: 1px solid hsl(var(--border));
-    position: sticky; top: 0;
-    background: hsl(var(--background) / 0.9);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    z-index: 100;
-  }
-  .nav-brand {
-    font-size: 14px; font-weight: 600;
-    color: hsl(var(--foreground));
-    letter-spacing: -0.01em;
-  }
-  .nav-brand span { color: hsl(var(--primary)); }
-  .nav-tabs {
-    display: flex; gap: 2px;
-    background: hsl(var(--muted));
-    border-radius: 8px;
-    padding: 4px;
-  }
-  .nav-tab {
-    padding: 6px 14px; border-radius: 6px;
-    cursor: pointer; border: none; background: none;
-    font-family: var(--font); font-size: 13px; font-weight: 500;
-    color: hsl(var(--muted-foreground));
-    transition: color 0.15s, background 0.15s, box-shadow 0.15s;
-    white-space: nowrap;
-  }
-  .nav-tab:hover { color: hsl(var(--foreground)); }
-  .nav-tab.active {
-    background: hsl(var(--background));
-    color: hsl(var(--foreground));
-    box-shadow: 0 1px 2px rgba(0,0,0,0.08);
-  }
+  nav { display: flex; align-items: center; justify-content: space-between; padding: 16px 32px; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--bg); z-index: 100; }
+  .nav-brand { font-family: var(--serif); font-size: 16px; font-weight: 500; color: var(--accent); letter-spacing: 0.05em; text-transform: uppercase; }
+  .nav-brand span { font-style: italic; }
+  .nav-tabs { display: flex; gap: 4px; }
+  .nav-tab { padding: 6px 14px; border-radius: 6px; cursor: pointer; color: var(--muted); border: none; background: none; font-family: var(--mono); font-size: 12px; transition: all 0.15s; }
+  .nav-tab:hover { color: var(--text); background: var(--bg3); }
+  .nav-tab.active { color: var(--accent); background: rgba(200,181,96,0.1); }
   .nav-right { display: flex; align-items: center; gap: 12px; }
-  .tc-badge {
-    font-size: 12px; font-weight: 500;
-    color: hsl(var(--muted-foreground));
-    padding: 5px 12px;
-    border: 1px solid hsl(var(--border));
-    border-radius: 20px; cursor: pointer;
-    transition: border-color 0.15s, color 0.15s;
-    background: hsl(var(--background));
-  }
-  .tc-badge:hover { border-color: hsl(var(--primary)); color: hsl(var(--foreground)); }
-  .tc-badge span { color: hsl(var(--primary)); }
+  .tc-badge { font-size: 11px; color: var(--muted); padding: 4px 10px; border: 1px solid var(--border); border-radius: 20px; cursor: pointer; transition: border-color 0.15s; }
+  .tc-badge:hover { border-color: var(--border2); color: var(--text); }
+  .tc-badge span { color: var(--accent); font-weight: 500; }
 
   /* LAYOUT */
-  .page { display: none; padding: 32px; max-width: 1400px; margin: 0 auto; animation: fadeUp 0.5s ease-out; }
+  .page { display: none; padding: 32px; max-width: 1400px; margin: 0 auto; }
   .page.active { display: block; }
 
-  @keyframes fadeUp {
-    from { opacity: 0; transform: translateY(8px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
+  /* DASHBOARD */
+  .metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 28px; }
+  .metric { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 20px 22px; position: relative; overflow: hidden; transition: border-color 0.15s; }
+  .metric:hover { border-color: var(--border2); }
+  .metric::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: var(--accent); opacity: 0; transition: opacity 0.15s; }
+  .metric:hover::before { opacity: 1; }
+  .metric-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 10px; }
+  .metric-value { font-family: 'IBM Plex Mono', monospace; font-size: 26px; font-weight: 400; color: var(--text); line-height: 1; }
+  .metric-sub { font-size: 11px; color: var(--muted); margin-top: 6px; }
+  .metric-sub.up { color: var(--green); }
+  .metric-sub.down { color: var(--red); }
 
-  /* KPI CARDS */
-  .metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
-  .metric {
-    background: hsl(var(--card));
-    border: 1px solid hsl(var(--border));
-    border-radius: 8px;
-    padding: 24px;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-    transition: box-shadow 0.15s, border-color 0.15s;
-  }
-  .metric:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.08); border-color: hsl(220 13% 82%); }
-  .metric-label {
-    font-size: 12px; font-weight: 500; letter-spacing: 0.02em;
-    color: hsl(var(--muted-foreground)); margin-bottom: 10px;
-    text-transform: uppercase; letter-spacing: 0.06em;
-  }
-  .metric-value {
-    font-size: 28px; font-weight: 700;
-    color: hsl(var(--foreground)); line-height: 1;
-    letter-spacing: -0.02em;
-  }
-  .metric-sub { font-size: 12px; color: hsl(var(--muted-foreground)); margin-top: 6px; }
-  .metric-sub.up { color: hsl(var(--gain)); }
-  .metric-sub.down { color: hsl(var(--loss)); }
-
-  /* CARDS */
-  .dash-grid { display: grid; grid-template-columns: 1fr 320px; gap: 20px; margin-bottom: 24px; }
-  .card {
-    background: hsl(var(--card));
-    border: 1px solid hsl(var(--border));
-    border-radius: 8px;
-    padding: 24px;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-  }
-  .card-title {
-    font-size: 12px; font-weight: 500; text-transform: uppercase;
-    letter-spacing: 0.06em; color: hsl(var(--muted-foreground));
-    margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between;
-  }
+  .dash-grid { display: grid; grid-template-columns: 1fr 320px; gap: 20px; margin-bottom: 28px; }
+  .card { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 24px 26px; }
+  .card-title { font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; }
 
   /* BARRAS */
-  .bar-item {
-    display: flex; align-items: center; gap: 10px;
-    margin-bottom: 14px; padding: 6px 8px; border-radius: 6px;
-    transition: background 0.15s;
-  }
-  .bar-item:hover { background: hsl(var(--muted) / 0.7); }
-  .bar-label { width: 220px; font-size: 13px; color: hsl(var(--foreground)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-shrink: 0; }
-  .bar-track { flex: 1; height: 5px; background: hsl(var(--muted)); border-radius: 3px; overflow: hidden; }
-  .bar-fill { height: 100%; background: hsl(var(--primary)); border-radius: 3px; transition: width 0.6s cubic-bezier(0.4,0,0.2,1); }
-  .bar-amt { width: 120px; text-align: right; font-size: 12px; font-weight: 500; color: hsl(var(--muted-foreground)); flex-shrink: 0; }
+  .bar-item { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; padding: 6px 8px; border-radius: 6px; transition: background 0.15s; } .bar-item:hover { background: rgba(200,181,96,0.06); }
+  .bar-label { width: 220px; font-size: 13px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-shrink: 0; }
+  .bar-track { flex: 1; height: 6px; background: var(--bg3); border-radius: 3px; overflow: hidden; }
+  .bar-fill { height: 100%; background: var(--accent); border-radius: 3px; transition: width 0.6s cubic-bezier(0.4,0,0.2,1); }
+  .bar-amt { width: 120px; text-align: right; font-size: 12px; color: var(--muted); flex-shrink: 0; }
 
   /* DONUT */
   .donut-wrap { display: flex; align-items: center; gap: 20px; }
   svg.donut { flex-shrink: 0; }
   .donut-legend { flex: 1; }
   .legend-item { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 11px; }
-  .legend-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+  .legend-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
 
-  /* ÚLTIMOS GASTOS */
-  .recent-item { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid hsl(var(--border)); transition: background 0.15s; }
+  /* ULTIMOS GASTOS */
+  .recent-item { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); }
   .recent-item:last-child { border-bottom: none; }
-  .recent-dot { width: 6px; height: 6px; border-radius: 50%; background: hsl(var(--primary)); flex-shrink: 0; }
+  .recent-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); flex-shrink: 0; }
   .recent-info { flex: 1; min-width: 0; }
-  .recent-desc { font-size: 13px; color: hsl(var(--foreground)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .recent-meta { font-size: 11px; color: hsl(var(--muted-foreground)); margin-top: 2px; }
-  .recent-monto { font-size: 13px; font-weight: 600; color: hsl(var(--foreground)); white-space: nowrap; }
+  .recent-desc { font-size: 12px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .recent-meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .recent-monto { font-size: 13px; font-weight: 500; color: var(--accent); white-space: nowrap; }
 
   /* TABLA */
   .filters { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
-  .filter-input {
-    background: hsl(var(--background));
-    border: 1px solid hsl(var(--border));
-    border-radius: 6px; padding: 7px 12px;
-    color: hsl(var(--foreground));
-    font-family: var(--font); font-size: 13px;
-    outline: none; transition: border-color 0.15s, box-shadow 0.15s;
-  }
-  .filter-input:focus { border-color: hsl(var(--primary)); box-shadow: 0 0 0 3px hsl(var(--primary) / 0.1); }
-  .filter-input::placeholder { color: hsl(var(--muted-foreground)); }
-  select.filter-input option { background: hsl(var(--background)); color: hsl(var(--foreground)); }
+  .filter-input { background: var(--bg2); border: 1px solid var(--border); border-radius: 6px; padding: 7px 12px; color: var(--text); font-family: var(--mono); font-size: 12px; outline: none; transition: border-color 0.15s; }
+  .filter-input:focus { border-color: var(--accent); }
+  .filter-input::placeholder { color: var(--muted); }
+  select.filter-input option { background: var(--bg2); }
+  .btn { padding: 7px 16px; border-radius: 6px; cursor: pointer; font-family: var(--mono); font-size: 12px; border: 1px solid var(--border); background: transparent; color: var(--muted); transition: all 0.15s; }
+  .btn:hover { border-color: var(--border2); color: var(--text); }
+  .btn.primary { background: var(--accent); color: var(--bg); border-color: var(--accent); font-weight: 500; }
+  .btn.primary:hover { background: var(--accent2); border-color: var(--accent2); }
+  .btn-clear { padding: 7px 12px; border-radius: 6px; cursor: pointer; font-family: var(--mono); font-size: 11px; border: 1px solid var(--border); background: transparent; color: var(--muted); transition: all 0.15s; }
+  .btn-clear:hover { color: var(--red); border-color: var(--red); }
 
-  /* BOTONES */
-  .btn {
-    padding: 7px 16px; border-radius: 6px; cursor: pointer;
-    font-family: var(--font); font-size: 13px; font-weight: 500;
-    height: 36px; display: inline-flex; align-items: center; gap: 6px;
-    border: 1px solid hsl(var(--border));
-    background: hsl(var(--background));
-    color: hsl(var(--muted-foreground));
-    transition: all 0.15s;
-  }
-  .btn:hover { border-color: hsl(220 13% 78%); color: hsl(var(--foreground)); }
-  .btn.primary {
-    background: hsl(var(--primary)); color: white;
-    border-color: hsl(var(--primary)); font-weight: 500;
-  }
-  .btn.primary:hover { background: hsl(var(--primary-hover)); border-color: hsl(var(--primary-hover)); }
-  .btn-clear {
-    padding: 7px 12px; border-radius: 6px; cursor: pointer;
-    font-family: var(--font); font-size: 12px; font-weight: 500;
-    border: 1px solid hsl(var(--border));
-    background: transparent; color: hsl(var(--muted-foreground));
-    transition: all 0.15s;
-  }
-  .btn-clear:hover { color: hsl(var(--loss)); border-color: hsl(var(--loss)); }
-
-  /* TABLA DE DATOS */
   table { width: 100%; border-collapse: collapse; }
-  th {
-    text-align: left; padding: 10px 14px;
-    font-size: 12px; font-weight: 500;
-    text-transform: uppercase; letter-spacing: 0.06em;
-    color: hsl(var(--muted-foreground));
-    border-bottom: 1px solid hsl(var(--border));
-    white-space: nowrap; cursor: pointer; user-select: none;
-  }
-  th:hover { color: hsl(var(--foreground)); }
+  th { text-align: left; padding: 8px 10px; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); border-bottom: 1px solid var(--border); white-space: nowrap; cursor: pointer; user-select: none; }
+  th:hover { color: var(--text); }
   th .sort-arrow { opacity: 0.3; margin-left: 4px; }
-  th.sorted .sort-arrow { opacity: 1; color: hsl(var(--primary)); }
-  td { padding: 12px 14px; border-bottom: 1px solid hsl(var(--border)); font-size: 13px; font-weight: 500; vertical-align: middle; }
+  th.sorted .sort-arrow { opacity: 1; color: var(--accent); }
+  td { padding: 9px 10px; border-bottom: 1px solid var(--border); font-size: 12px; vertical-align: middle; }
   tr:last-child td { border-bottom: none; }
-  tr:hover td { background: hsl(var(--muted) / 0.5); }
+  tr:hover td { background: rgba(255,255,255,0.02); }
+  .pill { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 500; }
+  .pill-mat { background: rgba(90,160,210,0.15); color: var(--blue); }
+  .pill-mo { background: rgba(93,184,122,0.15); color: var(--green); }
+  .pill-hon { background: rgba(200,181,96,0.15); color: var(--accent); }
+  .pill-otro { background: rgba(255,255,255,0.07); color: var(--muted); }
+  .monto-cell { font-weight: 500; color: var(--accent); font-family: var(--mono); }
+  .usd-cell { font-size: 11px; color: var(--muted); }
+  .pagination { display: flex; align-items: center; gap: 8px; margin-top: 16px; justify-content: flex-end; font-size: 12px; color: var(--muted); }
+  .page-btn { padding: 4px 10px; border-radius: 4px; cursor: pointer; border: 1px solid var(--border); background: transparent; color: var(--muted); font-family: var(--mono); font-size: 12px; }
+  .page-btn:hover { border-color: var(--border2); color: var(--text); }
+  .page-btn.active { border-color: var(--accent); color: var(--accent); }
 
-  .pill { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 500; }
-  .pill-mat { background: hsl(210 80% 94%); color: hsl(210 80% 38%); }
-  .pill-mo  { background: hsl(142 60% 92%); color: hsl(142 60% 30%); }
-  .pill-hon { background: hsl(220 80% 94%); color: hsl(220 80% 40%); }
-  .pill-otro { background: hsl(var(--muted)); color: hsl(var(--muted-foreground)); }
-
-  .monto-cell { font-weight: 600; color: hsl(var(--foreground)); }
-  .usd-cell { font-size: 11px; color: hsl(var(--muted-foreground)); }
-
-  .pagination { display: flex; align-items: center; gap: 8px; margin-top: 16px; justify-content: flex-end; font-size: 12px; color: hsl(var(--muted-foreground)); }
-  .page-btn {
-    padding: 4px 10px; border-radius: 4px; cursor: pointer;
-    border: 1px solid hsl(var(--border));
-    background: transparent; color: hsl(var(--muted-foreground));
-    font-family: var(--font); font-size: 12px; font-weight: 500;
-    transition: all 0.15s;
-  }
-  .page-btn:hover { border-color: hsl(220 13% 78%); color: hsl(var(--foreground)); }
-  .page-btn.active { border-color: hsl(var(--primary)); color: hsl(var(--primary)); background: hsl(var(--primary) / 0.06); }
-
-  /* FORMULARIO */
+  /* CARGA */
   .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
   .form-group { display: flex; flex-direction: column; gap: 6px; }
   .form-group.full { grid-column: 1 / -1; }
-  label { font-size: 12px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; color: hsl(var(--muted-foreground)); }
-  input, select, textarea {
-    background: hsl(var(--background));
-    border: 1px solid hsl(var(--border));
-    border-radius: 6px; padding: 9px 12px;
-    color: hsl(var(--foreground));
-    font-family: var(--font); font-size: 13px;
-    outline: none; transition: border-color 0.15s, box-shadow 0.15s; width: 100%;
-  }
-  input:focus, select:focus, textarea:focus {
-    border-color: hsl(var(--primary));
-    box-shadow: 0 0 0 3px hsl(var(--primary) / 0.1);
-  }
-  select option { background: hsl(var(--background)); color: hsl(var(--foreground)); }
+  label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+  input, select, textarea { background: var(--bg2); border: 1px solid var(--border); border-radius: 6px; padding: 9px 12px; color: var(--text); font-family: var(--mono); font-size: 13px; outline: none; transition: border-color 0.15s; width: 100%; }
+  input:focus, select:focus, textarea:focus { border-color: var(--accent); }
+  select option { background: var(--bg2); }
   textarea { resize: vertical; min-height: 70px; }
-  .dropzone {
-    border: 2px dashed hsl(var(--border));
-    border-radius: 8px; padding: 32px;
-    text-align: center; cursor: pointer;
-    transition: all 0.15s; color: hsl(var(--muted-foreground));
-  }
-  .dropzone:hover, .dropzone.drag {
-    border-color: hsl(var(--primary));
-    color: hsl(var(--primary));
-    background: hsl(var(--primary) / 0.04);
-  }
-  .dropzone.has-file { border-color: hsl(var(--gain)); color: hsl(var(--gain)); }
-  .form-actions { display: flex; gap: 10px; justify-content: flex-end; padding-top: 16px; border-top: 1px solid hsl(var(--border)); }
-  .success-msg {
-    background: hsl(142 60% 96%); border: 1px solid hsl(142 60% 80%);
-    border-radius: 8px; padding: 14px 18px;
-    color: hsl(142 60% 30%); font-size: 13px; margin-bottom: 16px; display: none;
-  }
-  .error-msg {
-    background: hsl(0 72% 97%); border: 1px solid hsl(0 72% 85%);
-    border-radius: 8px; padding: 14px 18px;
-    color: hsl(0 72% 40%); font-size: 13px; margin-bottom: 16px; display: none;
-  }
+  .dropzone { border: 1px dashed var(--border2); border-radius: 8px; padding: 32px; text-align: center; cursor: pointer; transition: all 0.15s; color: var(--muted); }
+  .dropzone:hover, .dropzone.drag { border-color: var(--accent); color: var(--accent); background: rgba(200,181,96,0.04); }
+  .dropzone.has-file { border-color: var(--green); color: var(--green); }
+  .form-actions { display: flex; gap: 10px; justify-content: flex-end; padding-top: 16px; border-top: 1px solid var(--border); }
+  .success-msg { background: rgba(93,184,122,0.1); border: 1px solid rgba(93,184,122,0.3); border-radius: 8px; padding: 14px 18px; color: var(--green); font-size: 13px; margin-bottom: 16px; display: none; }
+  .error-msg { background: rgba(224,90,90,0.1); border: 1px solid rgba(224,90,90,0.3); border-radius: 8px; padding: 14px 18px; color: var(--red); font-size: 13px; margin-bottom: 16px; display: none; }
 
   /* LOADING */
-  .loading { text-align: center; padding: 48px; color: hsl(var(--muted-foreground)); }
-  .spinner {
-    width: 22px; height: 22px;
-    border: 2px solid hsl(var(--border));
-    border-top-color: hsl(var(--primary));
-    border-radius: 50%;
-    animation: spin 0.7s linear infinite;
-    display: inline-block; margin-bottom: 12px;
-  }
+  .loading { text-align: center; padding: 48px; color: var(--muted); }
+  .spinner { width: 24px; height: 24px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; display: inline-block; margin-bottom: 12px; }
   @keyframes spin { to { transform: rotate(360deg); } }
 
   /* HISTORIAL */
   .historial-wrap { max-width: 700px; }
   .upload-steps { display: flex; gap: 8px; margin-bottom: 24px; }
-  .step-dot {
-    width: 24px; height: 24px; border-radius: 50%;
-    border: 1px solid hsl(var(--border));
-    display: flex; align-items: center; justify-content: center;
-    font-size: 11px; font-weight: 600; color: hsl(var(--muted-foreground)); flex-shrink: 0;
-  }
-  .step-dot.done { background: hsl(var(--primary)); border-color: hsl(var(--primary)); color: white; }
-  .step-dot.active { border-color: hsl(var(--primary)); color: hsl(var(--primary)); }
+  .step-dot { width: 24px; height: 24px; border-radius: 50%; border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 11px; color: var(--muted); flex-shrink: 0; }
+  .step-dot.done { background: var(--accent); border-color: var(--accent); color: var(--bg); }
+  .step-dot.active { border-color: var(--accent); color: var(--accent); }
 
   /* PRESUPUESTOS */
-  .pres-card {
-    background: hsl(var(--card)); border: 1px solid hsl(var(--border));
-    border-radius: 8px; padding: 20px 22px; margin-bottom: 12px;
-    transition: box-shadow 0.15s, border-color 0.15s; cursor: pointer;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
-  }
-  .pres-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.08); border-color: hsl(220 13% 82%); }
+  .pres-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 20px 22px; margin-bottom: 12px; transition: border-color 0.15s; cursor: pointer; }
+  .pres-card:hover { border-color: var(--border2); }
   .pres-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; gap: 12px; }
-  .pres-name { font-size: 14px; font-weight: 600; color: hsl(var(--foreground)); }
-  .pres-meta { font-size: 12px; color: hsl(var(--muted-foreground)); margin-top: 3px; }
+  .pres-name { font-size: 14px; font-weight: 500; color: var(--text); }
+  .pres-meta { font-size: 11px; color: var(--muted); margin-top: 3px; }
   .pres-progress { margin-bottom: 8px; }
-  .pres-track { height: 4px; background: hsl(var(--muted)); border-radius: 3px; overflow: hidden; }
+  .pres-track { height: 5px; background: var(--bg3); border-radius: 3px; overflow: hidden; }
   .pres-fill { height: 100%; border-radius: 3px; transition: width 0.6s cubic-bezier(0.4,0,0.2,1); }
-  .pres-nums { display: flex; justify-content: space-between; font-size: 12px; margin-top: 6px; }
+  .pres-nums { display: flex; justify-content: space-between; font-size: 11px; margin-top: 6px; }
+  .dash-centro-tab { padding: 5px 14px; border-radius: 20px; cursor: pointer; font-family: var(--mono); font-size: 11px; border: 1px solid var(--border); background: transparent; color: var(--muted); transition: all 0.15s; white-space: nowrap; }
+  .dash-centro-tab:hover { border-color: var(--border2); color: var(--text); }
+  .dash-centro-tab.active { background: rgba(200,181,96,0.1); border-color: var(--accent); color: var(--accent); }
 
-  /* CENTRO TABS (dashboard) */
-  .dash-centro-tab {
-    padding: 5px 14px; border-radius: 20px; cursor: pointer;
-    font-family: var(--font); font-size: 12px; font-weight: 500;
-    border: 1px solid hsl(var(--border));
-    background: transparent; color: hsl(var(--muted-foreground));
-    transition: all 0.15s; white-space: nowrap;
-  }
-  .dash-centro-tab:hover { border-color: hsl(220 13% 78%); color: hsl(var(--foreground)); }
-  .dash-centro-tab.active {
-    background: hsl(var(--primary) / 0.08);
-    border-color: hsl(var(--primary));
-    color: hsl(var(--primary));
-  }
-
-  /* PROVEEDOR SUGGESTIONS */
+  /* PRESUPUESTOS */
   .prov-wrap { position: relative; }
-  .prov-suggestions {
-    position: absolute; top: 100%; left: 0; right: 0;
-    background: hsl(var(--card));
-    border: 1px solid hsl(var(--border));
-    border-radius: 8px; z-index: 200;
-    max-height: 180px; overflow-y: auto; margin-top: 4px;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.1);
-  }
-  .prov-sug-item {
-    padding: 8px 12px; cursor: pointer; font-size: 13px;
-    display: flex; align-items: center; justify-content: space-between;
-    transition: background 0.1s;
-  }
-  .prov-sug-item:hover { background: hsl(var(--muted)); }
-  .prov-sug-score { font-size: 11px; color: hsl(var(--muted-foreground)); margin-left: 8px; flex-shrink: 0; }
-  .prov-sug-header {
-    padding: 6px 12px 4px; font-size: 11px; font-weight: 500;
-    text-transform: uppercase; letter-spacing: 0.06em;
-    color: hsl(var(--muted-foreground)); border-bottom: 1px solid hsl(var(--border));
-  }
-
-  /* MERGE DUPLICADOS */
-  .merge-group {
-    background: hsl(var(--surface));
-    border: 1px solid hsl(var(--border));
-    border-radius: 8px; padding: 12px 14px; margin-bottom: 10px;
-  }
-  .merge-group-title { font-size: 12px; color: hsl(var(--muted-foreground)); margin-bottom: 8px; }
+  .prov-suggestions { position: absolute; top: 100%; left: 0; right: 0; background: var(--bg2); border: 1px solid var(--border2); border-radius: 6px; z-index: 200; max-height: 180px; overflow-y: auto; margin-top: 2px; box-shadow: 0 8px 24px rgba(0,0,0,0.4); }
+  .prov-sug-item { padding: 8px 12px; cursor: pointer; font-size: 12px; display: flex; align-items: center; justify-content: space-between; transition: background 0.1s; }
+  .prov-sug-item:hover { background: rgba(200,181,96,0.1); }
+  .prov-sug-score { font-size: 10px; color: var(--muted); margin-left: 8px; flex-shrink: 0; }
+  .prov-sug-header { padding: 6px 12px 4px; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); border-bottom: 1px solid var(--border); }
+  .merge-group { background: rgba(200,181,96,0.05); border: 1px solid rgba(200,181,96,0.2); border-radius: 8px; padding: 12px 14px; margin-bottom: 10px; }
+  .merge-group-title { font-size: 11px; color: var(--muted); margin-bottom: 8px; }
   .merge-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
-  .merge-chip {
-    background: hsl(var(--muted)); border: 1px solid hsl(var(--border));
-    border-radius: 4px; padding: 3px 10px;
-    font-size: 12px; font-weight: 500; cursor: pointer; transition: all 0.15s;
-  }
-  .merge-chip.selected {
-    border-color: hsl(var(--primary));
-    color: hsl(var(--primary));
-    background: hsl(var(--primary) / 0.08);
-  }
+  .merge-chip { background: var(--bg3); border: 1px solid var(--border); border-radius: 4px; padding: 3px 8px; font-size: 11px; cursor: pointer; transition: all 0.15s; }
+  .merge-chip.selected { border-color: var(--accent); color: var(--accent); background: rgba(200,181,96,0.1); }
 
   @media (max-width: 768px) {
-    nav { padding: 0 16px; }
-    .nav-tabs { overflow-x: auto; }
+    nav { padding: 12px 16px; }
     .page { padding: 16px; }
     .dash-grid { grid-template-columns: 1fr; }
     .form-grid { grid-template-columns: 1fr; }
@@ -411,7 +193,7 @@
     <button class="nav-tab" onclick="showPage('config')">⚙ Config</button>
   </div>
   <div class="nav-right">
-    <button class="btn-danger" onclick="clearData()" style="padding:5px 12px;border-radius:6px;cursor:pointer;font-family:var(--font);font-size:11px;border:1px solid hsl(0 72% 80%);background:transparent;color:hsl(var(--loss));transition:all 0.15s" onmouseover="this.style.background='hsl(0 72% 96%)'" onmouseout="this.style.background='transparent'">⚠ Borrar datos</button>
+    <button class="btn-danger" onclick="clearData()" style="padding:5px 12px;border-radius:6px;cursor:pointer;font-family:var(--mono);font-size:11px;border:1px solid rgba(224,90,90,0.3);background:transparent;color:#e05a5a;transition:all 0.15s" onmouseover="this.style.background='rgba(224,90,90,0.1)'" onmouseout="this.style.background='transparent'">⚠ Borrar datos</button>
     <div class="tc-badge" onclick="actualizarTC()" title="Click para actualizar">USD/ARS <span id="tcValor">cargando...</span></div>
   </div>
 </nav>
@@ -436,7 +218,7 @@
   </div>
   <div id="dashPresupuestos" style="display:none"></div>
   <div class="card">
-    <div class="card-title">Últimos gastos <span id="ultimosCount" style="color:hsl(var(--muted))"></span></div>
+    <div class="card-title">Últimos gastos <span id="ultimosCount" style="color:var(--muted)"></span></div>
     <div id="ultimosGastos"></div>
   </div>
 </div>
@@ -489,7 +271,7 @@
     </select>
     <input class="filter-input" type="text" id="fProveedor" placeholder="Buscar..." oninput="aplicarFiltros()" style="width:150px" title="Busca en proveedor, descripción y categoría">
     <button class="btn-clear" onclick="limpiarFiltros()">✕ Limpiar</button>
-    <span id="filtroCount" style="color:hsl(var(--muted));font-size:11px;margin-left:4px"></span>
+    <span id="filtroCount" style="color:var(--muted);font-size:11px;margin-left:4px"></span>
   </div>
   <div class="card" style="padding:0;overflow:hidden">
     <div style="overflow-x:auto">
@@ -601,19 +383,19 @@
 <!-- HISTORIAL -->
 <div id="page-historial" class="page">
   <div class="historial-wrap" style="max-width:900px">
-    <p style="color:hsl(var(--muted));margin-bottom:24px;line-height:1.7">Exportá el chat del grupo desde WhatsApp <strong style="color:hsl(var(--foreground))">con archivos</strong>, descomprimí el .zip y subí el .txt + todas las imágenes.</p>
+    <p style="color:var(--muted);margin-bottom:24px;line-height:1.7">Exportá el chat del grupo desde WhatsApp <strong style="color:var(--text)">con archivos</strong>, descomprimí el .zip y subí el .txt + todas las imágenes.</p>
 
     <div id="historialUpload">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
         <div>
-          <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:hsl(var(--muted));margin-bottom:8px">1 · Historial .txt</div>
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:8px">1 · Historial .txt</div>
           <div class="dropzone" id="dropTxt" onclick="document.getElementById('hFileTxt').click()">
             <div id="txtLabel">📄 Subí el archivo .txt</div>
           </div>
           <input type="file" id="hFileTxt" accept=".txt" style="display:none" onchange="onTxtSelect(this)">
         </div>
         <div>
-          <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:hsl(var(--muted));margin-bottom:8px">2 · Imágenes (opcional)</div>
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:8px">2 · Imágenes (opcional)</div>
           <div class="dropzone" id="dropImgs" onclick="document.getElementById('hFileImgs').click()">
             <div id="imgsLabel">🖼 Seleccioná todas las fotos</div>
             <div style="font-size:11px;margin-top:4px;opacity:0.5">Selección múltiple, nombres originales</div>
@@ -633,8 +415,8 @@
   <div style="max-width:1100px">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px">
       <div>
-        <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.1em;color:hsl(var(--muted));margin-bottom:4px">Presupuestos</div>
-        <div id="presupStats" style="font-size:12px;color:hsl(var(--muted))"></div>
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);margin-bottom:4px">Presupuestos</div>
+        <div id="presupStats" style="font-size:12px;color:var(--muted)"></div>
       </div>
       <button class="btn primary" onclick="abrirModalPresupuesto()">+ Nuevo presupuesto</button>
     </div>
@@ -645,11 +427,11 @@
 </div>
 
 <!-- MODAL NUEVO/EDITAR PRESUPUESTO -->
-<div id="modalPresupuesto" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:600;align-items:center;justify-content:center;padding:20px" onclick="cerrarModalPresupuesto()">
-  <div style="background:hsl(var(--background));border:1px solid hsl(var(--border));border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,0.12);width:100%;max-width:520px;padding:28px" onclick="event.stopPropagation()">
+<div id="modalPresupuesto" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:600;align-items:center;justify-content:center;padding:20px" onclick="cerrarModalPresupuesto()">
+  <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:12px;width:100%;max-width:520px;padding:28px" onclick="event.stopPropagation()">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
-      <div style="font-size:13px;font-weight:500;color:hsl(var(--foreground))" id="modalPresupuestoTitle">Nuevo presupuesto</div>
-      <button onclick="cerrarModalPresupuesto()" style="background:none;border:none;color:hsl(var(--muted));cursor:pointer;font-size:20px;line-height:1">✕</button>
+      <div style="font-size:13px;font-weight:500;color:var(--text)" id="modalPresupuestoTitle">Nuevo presupuesto</div>
+      <button onclick="cerrarModalPresupuesto()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:20px;line-height:1">✕</button>
     </div>
     <div class="form-grid" style="gap:14px">
       <div class="form-group full">
@@ -696,71 +478,71 @@
 </div>
 
 <!-- MODAL DETALLE PRESUPUESTO -->
-<div id="modalPresupuestoDetalle" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:600;align-items:center;justify-content:center;padding:20px" onclick="cerrarModalDetallePres()">
-  <div style="background:hsl(var(--background));border:1px solid hsl(var(--border));border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,0.12);width:100%;max-width:760px;max-height:90vh;overflow-y:auto;padding:28px" onclick="event.stopPropagation()">
+<div id="modalPresupuestoDetalle" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:600;align-items:center;justify-content:center;padding:20px" onclick="cerrarModalDetallePres()">
+  <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:12px;width:100%;max-width:760px;max-height:90vh;overflow-y:auto;padding:28px" onclick="event.stopPropagation()">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px">
       <div>
-        <div style="font-size:16px;font-weight:500;color:hsl(var(--foreground))" id="pdNombre"></div>
-        <div style="font-size:12px;color:hsl(var(--muted));margin-top:4px" id="pdMeta"></div>
+        <div style="font-size:16px;font-weight:500;color:var(--text)" id="pdNombre"></div>
+        <div style="font-size:12px;color:var(--muted);margin-top:4px" id="pdMeta"></div>
       </div>
-      <button onclick="cerrarModalDetallePres()" style="background:none;border:none;color:hsl(var(--muted));cursor:pointer;font-size:20px;line-height:1">✕</button>
+      <button onclick="cerrarModalDetallePres()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:20px;line-height:1">✕</button>
     </div>
     <!-- Progress bar -->
-    <div style="background:hsl(var(--muted));border-radius:8px;padding:16px 18px;margin-bottom:20px">
+    <div style="background:var(--bg3);border-radius:8px;padding:16px 18px;margin-bottom:20px">
       <div style="display:flex;justify-content:space-between;margin-bottom:10px;font-size:12px">
-        <span style="color:hsl(var(--muted))">Ejecutado</span>
-        <span id="pdPct" style="color:hsl(var(--primary));font-weight:500"></span>
+        <span style="color:var(--muted)">Ejecutado</span>
+        <span id="pdPct" style="color:var(--accent);font-weight:500"></span>
       </div>
-      <div style="height:8px;background:hsl(var(--background));border-radius:4px;overflow:hidden;margin-bottom:10px">
+      <div style="height:8px;background:var(--bg);border-radius:4px;overflow:hidden;margin-bottom:10px">
         <div id="pdBar" style="height:100%;border-radius:4px;transition:width 0.6s cubic-bezier(0.4,0,0.2,1)"></div>
       </div>
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;font-size:12px">
-        <div><div style="color:hsl(var(--muted));font-size:10px;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:2px">Presupuestado</div><div id="pdTotal" style="color:hsl(var(--foreground));font-weight:500"></div></div>
-        <div><div style="color:hsl(var(--muted));font-size:10px;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:2px">Ejecutado</div><div id="pdEjecutado" style="color:hsl(var(--primary));font-weight:500"></div></div>
-        <div><div style="color:hsl(var(--muted));font-size:10px;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:2px">Saldo</div><div id="pdSaldo" style="font-weight:500"></div></div>
+        <div><div style="color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:2px">Presupuestado</div><div id="pdTotal" style="color:var(--text);font-weight:500"></div></div>
+        <div><div style="color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:2px">Ejecutado</div><div id="pdEjecutado" style="color:var(--accent);font-weight:500"></div></div>
+        <div><div style="color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:2px">Saldo</div><div id="pdSaldo" style="font-weight:500"></div></div>
       </div>
     </div>
     <!-- Archivos -->
     <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-        <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:hsl(var(--muted))">Archivos adjuntos</div>
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted)">Archivos adjuntos</div>
       </div>
       <!-- Dropzone archivos -->
       <div id="presDropzone" onclick="document.getElementById('presFileInput').click()"
-        ondragover="event.preventDefault();this.style.borderColor='hsl(var(--primary))'"
+        ondragover="event.preventDefault();this.style.borderColor='var(--accent)'"
         ondragleave="this.style.borderColor='var(--border)'"
         ondrop="event.preventDefault();this.style.borderColor='var(--border)';subirArchivosPresupuesto(event.dataTransfer.files)"
         style="border:1px dashed var(--border);border-radius:8px;padding:14px;text-align:center;cursor:pointer;transition:border-color 0.15s;margin-bottom:12px">
         <div style="font-size:20px;margin-bottom:4px">📎</div>
-        <div style="font-size:12px;color:hsl(var(--muted))">Arrastrá o hacé click para subir archivos</div>
-        <div style="font-size:11px;color:hsl(var(--muted));margin-top:2px">PDF, Excel, Word, imágenes, texto…</div>
+        <div style="font-size:12px;color:var(--muted)">Arrastrá o hacé click para subir archivos</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px">PDF, Excel, Word, imágenes, texto…</div>
         <input type="file" id="presFileInput" multiple style="display:none" onchange="subirArchivosPresupuesto(this.files)">
       </div>
       <div id="pdArchivos"></div>
     </div>
     <!-- Gastos asignados -->
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-      <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:hsl(var(--muted))">Gastos asignados</div>
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted)">Gastos asignados</div>
       <button class="btn" onclick="abrirAsignador()" style="font-size:11px;padding:4px 10px">+ Asignar gastos</button>
     </div>
     <div id="pdGastos"></div>
     <!-- Asignador -->
     <div id="asignadorWrap" style="display:none;margin-top:16px;border-top:1px solid var(--border);padding-top:16px">
-      <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:hsl(var(--muted));margin-bottom:10px">Gastos sin presupuesto asignado</div>
-      <input type="text" id="asignadorBuscar" placeholder="Buscar por descripción o proveedor..." oninput="filtrarAsignador()" style="width:100%;background:hsl(var(--muted));border:1px solid var(--border);border-radius:6px;padding:8px 12px;color:hsl(var(--foreground));font-family:var(--font);font-size:12px;margin-bottom:10px">
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:10px">Gastos sin presupuesto asignado</div>
+      <input type="text" id="asignadorBuscar" placeholder="Buscar por descripción o proveedor..." oninput="filtrarAsignador()" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:8px 12px;color:var(--text);font-family:var(--mono);font-size:12px;margin-bottom:10px">
       <div id="asignadorLista" style="max-height:260px;overflow-y:auto;border:1px solid var(--border);border-radius:6px"></div>
     </div>
   </div>
 </div>
 
 <!-- MODAL PREVIEW ARCHIVO -->
-<div id="modalPreview" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:700;align-items:center;justify-content:center;padding:20px" onclick="cerrarPreview()">
-  <div style="background:hsl(var(--background));border:1px solid hsl(var(--border));border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,0.12);width:100%;max-width:900px;max-height:92vh;display:flex;flex-direction:column" onclick="event.stopPropagation()">
+<div id="modalPreview" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:700;align-items:center;justify-content:center;padding:20px" onclick="cerrarPreview()">
+  <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:12px;width:100%;max-width:900px;max-height:92vh;display:flex;flex-direction:column" onclick="event.stopPropagation()">
     <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 20px;border-bottom:1px solid var(--border);flex-shrink:0">
-      <div style="font-size:13px;color:hsl(var(--foreground));font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-right:12px" id="previewNombre"></div>
+      <div style="font-size:13px;color:var(--text);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-right:12px" id="previewNombre"></div>
       <div style="display:flex;gap:8px;flex-shrink:0">
         <a id="previewAbrirBtn" href="#" target="_blank" class="btn" style="font-size:11px;padding:4px 12px">↗ Abrir en nueva pestaña</a>
-        <button onclick="cerrarPreview()" style="background:none;border:none;color:hsl(var(--muted));cursor:pointer;font-size:20px;line-height:1">✕</button>
+        <button onclick="cerrarPreview()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:20px;line-height:1">✕</button>
       </div>
     </div>
     <div id="previewContent" style="flex:1;overflow:auto;min-height:0;border-radius:0 0 12px 12px"></div>
@@ -774,7 +556,7 @@
 
       <!-- PROVEEDORES -->
       <div class="card">
-        <div class="card-title">Proveedores <span id="provCount" style="color:hsl(var(--muted))"></span>
+        <div class="card-title">Proveedores <span id="provCount" style="color:var(--muted)"></span>
           <div style="display:flex;gap:6px">
             <button class="btn" onclick="detectarDuplicados()" style="font-size:11px;padding:4px 10px">🔍 Duplicados</button>
             <button class="btn" onclick="agregarProveedor()" style="font-size:11px;padding:4px 10px">+ Nuevo</button>
@@ -788,14 +570,14 @@
       <div class="card">
         <div class="card-title">Categorías</div>
         <div id="listaCategorias"></div>
-        <div style="margin-top:12px;font-size:11px;color:hsl(var(--muted))">Las categorías son fijas del sistema</div>
+        <div style="margin-top:12px;font-size:11px;color:var(--muted)">Las categorías son fijas del sistema</div>
       </div>
 
       <!-- CENTROS DE COSTO -->
       <div class="card" style="grid-column:1/-1">
         <div class="card-title">Centros de costo</div>
         <div id="listaCentros"></div>
-        <div style="margin-top:12px;font-size:11px;color:hsl(var(--muted))">Los centros de costo son fijos del sistema</div>
+        <div style="margin-top:12px;font-size:11px;color:var(--muted)">Los centros de costo son fijos del sistema</div>
       </div>
 
     </div>
@@ -914,24 +696,24 @@ function renderDashboard() {
         <div class="bar-label" style="width:220px;font-size:13px">${k}</div>
         <div class="bar-track"><div class="bar-fill" style="width:${v/maxC*100}%"></div></div>
         <div class="bar-amt" style="width:120px">$${(v/1000000).toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2})}M</div>
-      </div>`).join('') || '<div style="color:hsl(var(--muted));font-size:12px">Sin datos</div>';
+      </div>`).join('') || '<div style="color:var(--muted);font-size:12px">Sin datos</div>';
   } else {
     document.getElementById('dashBarTitle').textContent = 'Gastos por categoría';
     const byCat2 = {};
     gastos.forEach(g => { const k = g.categoria||'Otro'; byCat2[k] = (byCat2[k]||0)+(parseFloat(g.monto)||0); });
     const maxC2 = Math.max(...Object.values(byCat2), 1);
     document.getElementById('barrasCentro').innerHTML = Object.entries(byCat2).sort((a,b)=>b[1]-a[1]).map(([k,v]) =>
-      `<div class="bar-item" style="cursor:pointer" onclick="abrirDetalleCat('${k.replace(/'/g,"\\'").replace(/"/g,'&quot;')}')">
+      `<div class="bar-item" style="cursor:pointer" onclick="abrirDetalleCat('${k.replace(/'/g,"\'").replace(/"/g,'&quot;')}')">
         <div class="bar-label" style="width:160px;font-size:13px">${k}</div>
-        <div class="bar-track"><div class="bar-fill" style="width:${v/maxC2*100}%;background:hsl(210 80% 45%)"></div></div>
-        <div class="bar-amt" style="width:150px;color:hsl(210 80% 45%)">$${Math.round(v).toLocaleString('es-AR')} ↗</div>
-      </div>`).join('') || '<div style="color:hsl(var(--muted));font-size:12px">Sin gastos en este centro</div>';
+        <div class="bar-track"><div class="bar-fill" style="width:${v/maxC2*100}%;background:var(--blue)"></div></div>
+        <div class="bar-amt" style="width:150px;color:var(--blue)">$${Math.round(v).toLocaleString('es-AR')} ↗</div>
+      </div>`).join('') || '<div style="color:var(--muted);font-size:12px">Sin gastos en este centro</div>';
   }
 
   const byCat = {};
   gastos.forEach(g => { const k = g.categoria||'Otro'; byCat[k] = (byCat[k]||0)+(parseFloat(g.monto)||0); });
   const cats = Object.entries(byCat).sort((a,b)=>b[1]-a[1]);
-  const colors = ['hsl(var(--primary))','#6ab0d4','#5db87a','hsl(var(--loss))','#b07cc8','#e0905a','hsl(var(--muted-foreground))'];
+  const colors = ['#c8b560','#6ab0d4','#5db87a','#e05a5a','#b07cc8','#e0905a','#888882'];
   const totalCat = cats.reduce((s,[,v])=>s+v,0);
   let startAngle = -Math.PI/2;
   const r=60, cx=75, cy=75;
@@ -943,16 +725,16 @@ function renderDashboard() {
     return `<path d="M${cx},${cy} L${x1},${y1} A${r},${r} 0 ${angle>Math.PI?1:0},1 ${x2},${y2} Z" fill="${colors[i%colors.length]}" opacity="0.85"/>`;
   }).join('');
   const legend = cats.slice(0,6).map(([k,v],i) =>
-    `<div class="legend-item"><div class="legend-dot" style="background:${colors[i%colors.length]}"></div><span style="color:hsl(var(--muted))">${k}</span><span style="margin-left:auto;color:hsl(var(--foreground))">${totalCat?Math.round(v/totalCat*100):0}%</span></div>`).join('');
+    `<div class="legend-item"><div class="legend-dot" style="background:${colors[i%colors.length]}"></div><span style="color:var(--muted)">${k}</span><span style="margin-left:auto;color:var(--text)">${totalCat?Math.round(v/totalCat*100):0}%</span></div>`).join('');
   document.getElementById('donutCat').innerHTML = cats.length ? `
     <div style="display:flex;flex-direction:column;gap:12px">
       <div style="display:flex;justify-content:center">
         <svg class="donut" width="120" height="120" viewBox="0 0 150 150">
-          <circle cx="${cx}" cy="${cy}" r="30" fill="hsl(var(--card))"/>${paths}<circle cx="${cx}" cy="${cy}" r="30" fill="hsl(var(--card))"/>
+          <circle cx="${cx}" cy="${cy}" r="30" fill="var(--bg2)"/>${paths}<circle cx="${cx}" cy="${cy}" r="30" fill="var(--bg2)"/>
         </svg>
       </div>
       <div>${legend}</div>
-    </div>` : '<div style="color:hsl(var(--muted));font-size:12px">Sin datos</div>';
+    </div>` : '<div style="color:var(--muted);font-size:12px">Sin datos</div>';
 
   // Presupuestos del centro activo
   if (dashCentroActivo) {
@@ -970,19 +752,19 @@ function renderDashboard() {
             const pct = presARS > 0 ? Math.min(Math.round(ejecARS / presARS * 100), 100) : 0;
             const ejecDisp = fmtMonto(arsAMonedaPres(ejecARS, p.moneda), p.moneda);
             const saldoDisp = fmtMonto(Math.abs(arsAMonedaPres(saldoARS, p.moneda)), p.moneda);
-            const fillColor = pct >= 100 ? 'hsl(var(--loss))' : pct >= 80 ? '#e0905a' : 'hsl(var(--gain))';
-            return `<div style="margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--border);cursor:pointer" onclick="showPage('presupuestos');setTimeout(()=>abrirDetallePres('${p.id}'),300)" title="Ver detalle del presupuesto">
+            const fillColor = pct >= 100 ? 'var(--red)' : pct >= 80 ? '#e0905a' : 'var(--green)';
+            return \`<div style="margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--border);cursor:pointer" onclick="showPage('presupuestos');setTimeout(()=>abrirDetallePres('\${p.id}'),300)" title="Ver detalle del presupuesto">
               <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px">
-                <span style="font-size:13px;font-weight:500">${p.nombre}</span>
-                <span style="font-size:11px;color:hsl(var(--muted))">${pct}% ejecutado</span>
+                <span style="font-size:13px;font-weight:500">\${p.nombre}</span>
+                <span style="font-size:11px;color:var(--muted)">\${pct}% ejecutado</span>
               </div>
-              <div class="pres-track" style="margin-bottom:8px"><div class="pres-fill" style="width:${pct}%;background:${fillColor}"></div></div>
+              <div class="pres-track" style="margin-bottom:8px"><div class="pres-fill" style="width:\${pct}%;background:\${fillColor}"></div></div>
               <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;font-size:11px">
-                <div><div style="color:hsl(var(--muted));margin-bottom:2px;text-transform:uppercase;font-size:10px;letter-spacing:.06em">Presupuestado</div><div style="font-family:'Inter',sans-serif">${fmtMonto(parseFloat(p.monto_total), p.moneda)}</div></div>
-                <div><div style="color:hsl(var(--muted));margin-bottom:2px;text-transform:uppercase;font-size:10px;letter-spacing:.06em">Ejecutado</div><div style="font-family:'Inter',sans-serif;color:${fillColor}">${ejecDisp}</div></div>
-                <div><div style="color:hsl(var(--muted));margin-bottom:2px;text-transform:uppercase;font-size:10px;letter-spacing:.06em">Saldo</div><div style="font-family:'Inter',sans-serif;color:${saldoARS < 0 ? 'hsl(var(--loss))' : 'hsl(var(--foreground))'}">${saldoARS < 0 ? '–' : ''}${saldoDisp}</div></div>
+                <div><div style="color:var(--muted);margin-bottom:2px;text-transform:uppercase;font-size:10px;letter-spacing:.06em">Presupuestado</div><div style="font-family:'IBM Plex Mono',monospace">\${fmtMonto(parseFloat(p.monto_total), p.moneda)}</div></div>
+                <div><div style="color:var(--muted);margin-bottom:2px;text-transform:uppercase;font-size:10px;letter-spacing:.06em">Ejecutado</div><div style="font-family:'IBM Plex Mono',monospace;color:\${fillColor}">\${ejecDisp}</div></div>
+                <div><div style="color:var(--muted);margin-bottom:2px;text-transform:uppercase;font-size:10px;letter-spacing:.06em">Saldo</div><div style="font-family:'IBM Plex Mono',monospace;color:\${saldoARS < 0 ? 'var(--red)' : 'var(--text)'}">\${saldoARS < 0 ? '–' : ''}\${saldoDisp}</div></div>
               </div>
-            </div>`;
+            </div>\`;
           }).join('')}
         </div>`;
     } else {
@@ -1002,7 +784,7 @@ function renderDashboard() {
         <div class="recent-meta">${fmtFecha(g.fecha)} · ${g.proveedor||g.pagado_por||'—'}${dashCentroActivo?'':' · '+(g.centro_costo||'')}</div>
       </div>
       <div class="recent-monto">${g.moneda==='USD'?'USD ':'$'}${parseFloat(g.monto||0).toLocaleString('es-AR')}</div>
-    </div>`).join('') || '<div style="color:hsl(var(--muted));padding:16px 0">Sin gastos cargados aún</div>';
+    </div>`).join('') || '<div style="color:var(--muted);padding:16px 0">Sin gastos cargados aún</div>';
 }
 
 // ---- TABLA ----
@@ -1076,47 +858,47 @@ function renderTabla() {
       return `<tr style="cursor:pointer" onclick="abrirDetalle('${g.id}')">
         <td style="white-space:nowrap">${fmtFecha(g.fecha)}</td>
         <td style="min-width:200px;max-width:300px" onclick="event.stopPropagation()">
-          <textarea onchange="actualizarCampo('${g.id}','descripcion',this.value)" style="background:transparent;border:none;border-bottom:1px dashed transparent;color:hsl(var(--foreground));font-family:var(--font);font-size:13px;width:100%;padding:2px 0;resize:none;line-height:1.4;overflow:hidden" rows="2" onmouseover="this.style.borderBottomColor='var(--border)'" onmouseout="this.style.borderBottomColor='transparent'">${g.descripcion || ''}</textarea>
+          <textarea onchange="actualizarCampo('${g.id}','descripcion',this.value)" style="background:transparent;border:none;border-bottom:1px dashed transparent;color:var(--text);font-family:var(--mono);font-size:13px;width:100%;padding:2px 0;resize:none;line-height:1.4;overflow:hidden" rows="2" onmouseover="this.style.borderBottomColor='var(--border)'" onmouseout="this.style.borderBottomColor='transparent'">${g.descripcion || ''}</textarea>
         </td>
         <td onclick="event.stopPropagation()">
-          <select onchange="actualizarCentro('${g.id}',this.value)" style="background:hsl(var(--muted));border:1px solid var(--border);border-radius:4px;color:hsl(var(--foreground));font-family:var(--font);font-size:11px;padding:3px 6px;width:100%;cursor:pointer">
+          <select onchange="actualizarCentro('${g.id}',this.value)" style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:var(--mono);font-size:11px;padding:3px 6px;width:100%;cursor:pointer">
             ${centroOpts}
           </select>
         </td>
         <td onclick="event.stopPropagation()">
-          <select onchange="actualizarCampo('${g.id}','categoria',this.value)" style="background:hsl(var(--muted));border:1px solid var(--border);border-radius:4px;color:hsl(var(--foreground));font-family:var(--font);font-size:11px;padding:3px 6px;cursor:pointer">
+          <select onchange="actualizarCampo('${g.id}','categoria',this.value)" style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:var(--mono);font-size:11px;padding:3px 6px;cursor:pointer">
             ${catOpts}
           </select>
         </td>
         <td onclick="event.stopPropagation()">
-          <select onchange="actualizarCampo('${g.id}','proveedor',this.value)" style="background:hsl(var(--muted));border:1px solid var(--border);border-radius:4px;color:hsl(var(--muted));font-family:var(--font);font-size:11px;padding:3px 6px;width:100%;cursor:pointer">
+          <select onchange="actualizarCampo('${g.id}','proveedor',this.value)" style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;color:var(--muted);font-family:var(--mono);font-size:11px;padding:3px 6px;width:100%;cursor:pointer">
             <option value="">—</option>
             ${[...new Set([...(window.proveedoresList||[]), ...(g.proveedor ? [g.proveedor] : [])])].map(p=>`<option ${p===g.proveedor?'selected':''}>${p}</option>`).join('')}
           </select>
         </td>
-        <td style="color:hsl(var(--muted));font-size:12px">${g.pagado_por || '—'}</td>
+        <td style="color:var(--muted);font-size:12px">${g.pagado_por || '—'}</td>
         <td onclick="event.stopPropagation()">
           <select onchange="actualizarPresupuesto('${g.id}',this.value)"
-            style="background:hsl(var(--muted));border:1px solid ${g.presupuesto_id ? 'rgba(200,181,96,0.4)' : 'var(--border)'};border-radius:4px;color:${g.presupuesto_id ? 'hsl(var(--primary))' : 'hsl(var(--muted))'};font-family:var(--font);font-size:11px;padding:3px 6px;width:100%;cursor:pointer;max-width:160px">
+            style="background:var(--bg3);border:1px solid ${g.presupuesto_id ? 'rgba(200,181,96,0.4)' : 'var(--border)'};border-radius:4px;color:${g.presupuesto_id ? 'var(--accent)' : 'var(--muted)'};font-family:var(--mono);font-size:11px;padding:3px 6px;width:100%;cursor:pointer;max-width:160px">
             <option value="">— Sin asignar —</option>
             ${(allPresupuestos||[]).map(p=>`<option value="${p.id}" ${p.id===g.presupuesto_id?'selected':''}>${p.nombre.length>28?p.nombre.substring(0,26)+'…':p.nombre}</option>`).join('')}
           </select>
         </td>
         <td style="text-align:right;white-space:nowrap" onclick="event.stopPropagation()">
-          <span style="color:hsl(var(--muted));font-size:11px;margin-right:2px">${g.moneda === 'USD' ? 'USD' : '$'}</span><input type="number" value="${parseFloat(g.monto||0)}" onchange="actualizarCampo('${g.id}','monto',parseFloat(this.value))" style="background:transparent;border:none;border-bottom:1px dashed transparent;color:hsl(var(--primary));font-family:var(--font);font-size:13px;font-weight:500;width:110px;text-align:right;padding:2px 0" onmouseover="this.style.borderBottomColor='var(--border)'" onmouseout="this.style.borderBottomColor='transparent'">
+          <span style="color:var(--muted);font-size:11px;margin-right:2px">${g.moneda === 'USD' ? 'USD' : '$'}</span><input type="number" value="${parseFloat(g.monto||0)}" onchange="actualizarCampo('${g.id}','monto',parseFloat(this.value))" style="background:transparent;border:none;border-bottom:1px dashed transparent;color:var(--accent);font-family:var(--mono);font-size:13px;font-weight:500;width:110px;text-align:right;padding:2px 0" onmouseover="this.style.borderBottomColor='var(--border)'" onmouseout="this.style.borderBottomColor='transparent'">
         </td>
         <td style="text-align:right;white-space:nowrap">
           <span class="usd-cell">${g.moneda === 'USD' ? '—' : 'USD ' + Math.round((parseFloat(g.monto)||0)/tc).toLocaleString('es-AR')}</span>${imgIcon}
-          <button onclick="event.stopPropagation();eliminarGasto('${g.id}')" style="background:none;border:none;cursor:pointer;color:hsl(var(--muted));font-size:14px;margin-left:8px;padding:2px;opacity:0.5;transition:opacity 0.15s" onmouseover="this.style.opacity='1';this.style.color='hsl(var(--loss))'" onmouseout="this.style.opacity='0.5';this.style.color='hsl(var(--muted))'" title="Eliminar gasto">🗑</button>
+          <button onclick="event.stopPropagation();eliminarGasto('${g.id}')" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:14px;margin-left:8px;padding:2px;opacity:0.5;transition:opacity 0.15s" onmouseover="this.style.opacity='1';this.style.color='#e05a5a'" onmouseout="this.style.opacity='0.5';this.style.color='var(--muted)'" title="Eliminar gasto">🗑</button>
         </td>
       </tr>`;
     }),
-    `<tr style="background:hsl(var(--primary) / 0.04)">
-      <td colspan="7" style="color:hsl(var(--muted));font-size:11px">Total filtrado</td>
+    `<tr style="background:rgba(200,181,96,0.04)">
+      <td colspan="7" style="color:var(--muted);font-size:11px">Total filtrado</td>
       <td class="monto-cell" style="text-align:right">$${Math.round(totalFilt).toLocaleString('es-AR')}</td>
       <td class="usd-cell" style="text-align:right">USD ${Math.round(totalFilt/tc).toLocaleString('es-AR')}</td>
     </tr>`
-  ].join('') : '<tr><td colspan="9" style="text-align:center;padding:32px;color:hsl(var(--muted))">Sin resultados</td></tr>';
+  ].join('') : '<tr><td colspan="9" style="text-align:center;padding:32px;color:var(--muted)">Sin resultados</td></tr>';
 
   // Paginación
   const totalPages = Math.ceil(filtrados.length / PER_PAGE);
@@ -1288,7 +1070,7 @@ ${hTxtContent.slice(0, 80000)}`;
     window.hGastos = parsed.gastos || [];
     renderHistorialTabla();
   } catch(e) {
-    wrap.innerHTML = `<div style="color:hsl(var(--loss));padding:16px">Error: ${e.message}</div>`;
+    wrap.innerHTML = `<div style="color:var(--red);padding:16px">Error: ${e.message}</div>`;
     document.getElementById('btnProcesar').disabled = false;
   }
 }
@@ -1296,7 +1078,7 @@ ${hTxtContent.slice(0, 80000)}`;
 function renderHistorialTabla() {
   const gastos = window.hGastos;
   const wrap = document.getElementById('historialContent');
-  if (!gastos.length) { wrap.innerHTML = '<div style="color:hsl(var(--muted));padding:16px 0">No se encontraron gastos.</div>'; return; }
+  if (!gastos.length) { wrap.innerHTML = '<div style="color:var(--muted);padding:16px 0">No se encontraron gastos.</div>'; return; }
 
   const total = gastos.reduce((s,g) => s+(parseFloat(g.monto)||0), 0);
   const conImg = gastos.filter(g => g.comprobante && hImgMap[g.comprobante]).length;
@@ -1304,10 +1086,10 @@ function renderHistorialTabla() {
 
   wrap.innerHTML = `
     <div style="display:flex;align-items:center;justify-content:space-between;margin:20px 0 12px;flex-wrap:wrap;gap:10px">
-      <div style="font-size:12px;color:hsl(var(--muted));line-height:1.8">
-        <span style="color:hsl(var(--foreground))">${gastos.length}</span> gastos · Total <span style="color:hsl(var(--primary))">$${Math.round(total).toLocaleString('es-AR')}</span><br>
-        ${conImg > 0 ? `<span style="color:hsl(var(--gain))">✓ ${conImg} con imagen</span>` : ''}
-        ${sinImg > 0 ? ` · <span style="color:hsl(var(--muted))">${sinImg} imagen pendiente</span>` : ''}
+      <div style="font-size:12px;color:var(--muted);line-height:1.8">
+        <span style="color:var(--text)">${gastos.length}</span> gastos · Total <span style="color:var(--accent)">$${Math.round(total).toLocaleString('es-AR')}</span><br>
+        ${conImg > 0 ? `<span style="color:var(--green)">✓ ${conImg} con imagen</span>` : ''}
+        ${sinImg > 0 ? ` · <span style="color:var(--muted)">${sinImg} imagen pendiente</span>` : ''}
       </div>
       <button class="btn primary" onclick="cargarHistorialASupabase(this)">Subir imágenes y cargar al dashboard →</button>
     </div>
@@ -1322,23 +1104,23 @@ function renderHistorialTabla() {
         const thumb = imgFile
           ? `<img src="${URL.createObjectURL(imgFile)}" style="width:28px;height:28px;object-fit:cover;border-radius:4px;cursor:pointer;border:1px solid var(--border)" onclick="window.open('${URL.createObjectURL(imgFile)}')">`
           : g.comprobante
-            ? `<div style="width:28px;height:28px;border-radius:4px;border:1px dashed var(--border);display:flex;align-items:center;justify-content:center;font-size:10px;color:hsl(var(--muted))" title="${g.comprobante}">?</div>`
+            ? `<div style="width:28px;height:28px;border-radius:4px;border:1px dashed var(--border);display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--muted)" title="${g.comprobante}">?</div>`
             : `<div style="width:28px;height:28px"></div>`;
         return `<tr id="hrow-${i}">
           <td style="padding:4px 6px">${thumb}</td>
-          <td><input value="${g.fecha||''}" style="width:105px;background:transparent;border:none;border-bottom:1px dashed var(--border);color:hsl(var(--foreground));font-family:var(--font);font-size:12px;padding:2px 4px" onchange="hGastos[${i}].fecha=this.value"></td>
-          <td><input type="number" value="${g.monto||''}" style="width:95px;background:transparent;border:none;border-bottom:1px dashed var(--border);color:hsl(var(--primary));font-family:var(--font);font-size:12px;padding:2px 4px" onchange="hGastos[${i}].monto=this.value"></td>
-          <td><select onchange="hGastos[${i}].centro_costo=this.value" style="width:175px;background:hsl(var(--card));border:1px solid var(--border);color:hsl(var(--foreground));font-family:var(--font);font-size:11px;padding:3px 6px;border-radius:4px">
+          <td><input value="${g.fecha||''}" style="width:105px;background:transparent;border:none;border-bottom:1px dashed var(--border);color:var(--text);font-family:var(--mono);font-size:12px;padding:2px 4px" onchange="hGastos[${i}].fecha=this.value"></td>
+          <td><input type="number" value="${g.monto||''}" style="width:95px;background:transparent;border:none;border-bottom:1px dashed var(--border);color:var(--accent);font-family:var(--mono);font-size:12px;padding:2px 4px" onchange="hGastos[${i}].monto=this.value"></td>
+          <td><select onchange="hGastos[${i}].centro_costo=this.value" style="width:175px;background:var(--bg2);border:1px solid var(--border);color:var(--text);font-family:var(--mono);font-size:11px;padding:3px 6px;border-radius:4px">
             ${['Infraestructura agua y cloacas','Infraestructura gas','Infraestructura electricidad','Albañilería / obra civil','Honorarios profesionales','Trámites / legal','Otros'].map(c=>`<option ${c===g.centro_costo?'selected':''}>${c}</option>`).join('')}
           </select></td>
-          <td><input value="${(g.descripcion||'').replace(/"/g,"'")}" style="width:190px;background:transparent;border:none;border-bottom:1px dashed var(--border);color:hsl(var(--foreground));font-family:var(--font);font-size:12px;padding:2px 4px" onchange="hGastos[${i}].descripcion=this.value"></td>
-          <td><input value="${g.proveedor||''}" id="hprov-${i}" style="width:120px;background:transparent;border:none;border-bottom:1px dashed var(--border);color:hsl(var(--muted));font-family:var(--font);font-size:12px;padding:2px 4px" 
+          <td><input value="${(g.descripcion||'').replace(/"/g,"'")}" style="width:190px;background:transparent;border:none;border-bottom:1px dashed var(--border);color:var(--text);font-family:var(--mono);font-size:12px;padding:2px 4px" onchange="hGastos[${i}].descripcion=this.value"></td>
+          <td><input value="${g.proveedor||''}" id="hprov-${i}" style="width:120px;background:transparent;border:none;border-bottom:1px dashed var(--border);color:var(--muted);font-family:var(--mono);font-size:12px;padding:2px 4px" 
             oninput="hGastos[${i}].proveedor=this.value;onProvInput(this,'hprovsug-${i}')" 
             onblur="setTimeout(()=>hideSug('hprovsug-${i}'),150)"
             onchange="hGastos[${i}].proveedor=this.value">
             <div class="prov-suggestions" id="hprovsug-${i}" style="display:none;width:200px"></div>
           </td>
-          <td><button onclick="hGastos[${i}]._skip=!hGastos[${i}]._skip;this.closest('tr').style.opacity=hGastos[${i}]._skip?'0.3':'1'" style="background:none;border:none;cursor:pointer;color:hsl(var(--muted));font-size:14px" title="Omitir">✕</button></td>
+          <td><button onclick="hGastos[${i}]._skip=!hGastos[${i}]._skip;this.closest('tr').style.opacity=hGastos[${i}]._skip?'0.3':'1'" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:14px" title="Omitir">✕</button></td>
         </tr>`;
       }).join('')}</tbody>
     </table></div>`;
@@ -1417,16 +1199,16 @@ function renderConfig() {
     ? provs.map(p => `
       <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border)">
         <span style="flex:1;font-size:13px">${p}</span>
-        <button onclick="eliminarProveedor('${p.replace(/'/g,"\\'")}')" style="background:none;border:none;cursor:pointer;color:hsl(var(--muted));font-size:13px;padding:2px 6px" title="Eliminar">✕</button>
+        <button onclick="eliminarProveedor('${p.replace(/'/g,"\\'")}')" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:13px;padding:2px 6px" title="Eliminar">✕</button>
       </div>`).join('')
-    : '<div style="color:hsl(var(--muted));font-size:13px;padding:8px 0">Sin proveedores cargados</div>';
+    : '<div style="color:var(--muted);font-size:13px;padding:8px 0">Sin proveedores cargados</div>';
 
   const cats = ['Materiales','Mano de obra','Honorarios','Servicios','Transporte','Impuestos/Tasas','Administrativo','Otro'];
   document.getElementById('listaCategorias').innerHTML = cats.map(c => {
     const count = allGastos.filter(g => g.categoria === c).length;
     return `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
       <span style="font-size:13px">${c}</span>
-      <span style="font-size:11px;color:hsl(var(--muted))">${count} gastos</span>
+      <span style="font-size:11px;color:var(--muted)">${count} gastos</span>
     </div>`;
   }).join('');
 
@@ -1436,7 +1218,7 @@ function renderConfig() {
     const total = allGastos.filter(g => g.centro_costo === c).reduce((s,g) => s+(parseFloat(g.monto)||0), 0);
     return `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
       <span style="font-size:13px">${c}</span>
-      <span style="font-size:11px;color:hsl(var(--muted))">${count} gastos · $${Math.round(total/1000000*100)/100}M</span>
+      <span style="font-size:11px;color:var(--muted)">${count} gastos · $${Math.round(total/1000000*100)/100}M</span>
     </div>`;
   }).join('');
 }
@@ -1560,9 +1342,9 @@ function abrirDetalle(id) {
 
   const msgEl = document.getElementById('mMensajeOriginal');
   if (g.mensaje_original) {
-    msgEl.innerHTML = `<div style="background:hsl(var(--primary) / 0.05);border-left:3px solid hsl(var(--primary));border-radius:0 8px 8px 0;padding:12px 16px">
-      <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:hsl(var(--primary));margin-bottom:6px">💬 Mensaje original de WhatsApp</div>
-      <div style="font-size:13px;color:hsl(var(--foreground));line-height:1.6;white-space:pre-wrap">${g.mensaje_original}</div>
+    msgEl.innerHTML = `<div style="background:rgba(200,181,96,0.06);border-left:3px solid var(--accent);border-radius:0 8px 8px 0;padding:12px 16px">
+      <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--accent);margin-bottom:6px">💬 Mensaje original de WhatsApp</div>
+      <div style="font-size:13px;color:var(--text);line-height:1.6;white-space:pre-wrap">${g.mensaje_original}</div>
     </div>`;
   } else {
     msgEl.innerHTML = '';
@@ -1573,9 +1355,9 @@ function abrirDetalle(id) {
     const isImg = /\.(jpg|jpeg|png|gif|webp)$/i.test(g.imagen_url);
     comp.innerHTML = isImg
       ? `<img src="${g.imagen_url}" style="width:100%;border-radius:8px;border:1px solid var(--border);cursor:pointer" onclick="window.open('${g.imagen_url}','_blank')">`
-      : `<a href="${g.imagen_url}" target="_blank" style="display:flex;align-items:center;gap:8px;padding:14px;background:hsl(var(--muted));border-radius:8px;color:hsl(var(--primary));text-decoration:none;font-size:13px">📄 Ver comprobante PDF</a>`;
+      : `<a href="${g.imagen_url}" target="_blank" style="display:flex;align-items:center;gap:8px;padding:14px;background:var(--bg3);border-radius:8px;color:var(--accent);text-decoration:none;font-size:13px">📄 Ver comprobante PDF</a>`;
   } else {
-    comp.innerHTML = '<div style="padding:16px;text-align:center;color:hsl(var(--muted));font-size:13px;border:1px dashed var(--border);border-radius:8px">Sin comprobante adjunto</div>';
+    comp.innerHTML = '<div style="padding:16px;text-align:center;color:var(--muted);font-size:13px;border:1px dashed var(--border);border-radius:8px">Sin comprobante adjunto</div>';
   }
 
   const overlay = document.getElementById('modalOverlay');
@@ -1673,7 +1455,7 @@ function arsAMonedaPres(arsAmount, moneda) {
 function renderPresupuestos() {
   const container = document.getElementById('listaPresupuestos');
   if (!allPresupuestos.length) {
-    container.innerHTML = '<div style="color:hsl(var(--muted));padding:32px;text-align:center;border:1px dashed var(--border);border-radius:10px">No hay presupuestos cargados.<br><span style="font-size:12px">Hacé click en "+ Nuevo presupuesto" para empezar.</span></div>';
+    container.innerHTML = '<div style="color:var(--muted);padding:32px;text-align:center;border:1px dashed var(--border);border-radius:10px">No hay presupuestos cargados.<br><span style="font-size:12px">Hacé click en "+ Nuevo presupuesto" para empezar.</span></div>';
     document.getElementById('presupStats').textContent = '';
     return;
   }
@@ -1690,7 +1472,7 @@ function renderPresupuestos() {
     const ejecARS = getEjecutadoARS(p.id);
     const pct = presARS ? Math.min(ejecARS/presARS*100, 100) : 0;
     const overBudget = ejecARS > presARS;
-    const barColor = overBudget ? 'hsl(var(--loss))' : pct > 80 ? '#e0905a' : 'hsl(var(--primary))';
+    const barColor = overBudget ? 'var(--red)' : pct > 80 ? '#e0905a' : 'var(--accent)';
     const nGastos = allGastos.filter(g => g.presupuesto_id === p.id).length;
 
     // Mostrar montos en la moneda del presupuesto
@@ -1703,20 +1485,20 @@ function renderPresupuestos() {
         <div class="pres-header">
           <div>
             <div class="pres-name">${p.nombre}</div>
-            <div class="pres-meta">${[p.centro_costo, p.proveedor].filter(Boolean).join(' · ') || 'Sin categorizar'} · ${nGastos} gasto${nGastos!==1?'s':''} · <span style="color:hsl(var(--primary));font-size:10px">${monedaLabel}</span></div>
+            <div class="pres-meta">${[p.centro_costo, p.proveedor].filter(Boolean).join(' · ') || 'Sin categorizar'} · ${nGastos} gasto${nGastos!==1?'s':''} · <span style="color:var(--accent);font-size:10px">${monedaLabel}</span></div>
           </div>
           <div style="text-align:right;flex-shrink:0">
             <div style="font-size:18px;font-weight:500;color:${barColor}">${Math.round(pct)}%</div>
-            <div style="font-size:11px;color:hsl(var(--muted))">ejecutado</div>
+            <div style="font-size:11px;color:var(--muted)">ejecutado</div>
           </div>
         </div>
         <div class="pres-progress">
           <div class="pres-track"><div class="pres-fill" style="width:${pct}%;background:${barColor}"></div></div>
         </div>
         <div class="pres-nums">
-          <span style="color:hsl(var(--muted))">Presupuesto: <span style="color:hsl(var(--foreground))">${fmtMonto(parseFloat(p.monto_total), moneda)}</span></span>
-          <span style="color:hsl(var(--muted))">Ejecutado: <span style="color:hsl(var(--primary))">${fmtMonto(ejecEnMoneda, moneda)}</span></span>
-          <span style="color:hsl(var(--muted))">Saldo: <span style="color:${saldoEnMoneda<0?'hsl(var(--loss))':'hsl(var(--gain))'}">${fmtMonto(saldoEnMoneda, moneda)}</span></span>
+          <span style="color:var(--muted)">Presupuesto: <span style="color:var(--text)">${fmtMonto(parseFloat(p.monto_total), moneda)}</span></span>
+          <span style="color:var(--muted)">Ejecutado: <span style="color:var(--accent)">${fmtMonto(ejecEnMoneda, moneda)}</span></span>
+          <span style="color:var(--muted)">Saldo: <span style="color:${saldoEnMoneda<0?'var(--red)':'var(--green)'}">${fmtMonto(saldoEnMoneda, moneda)}</span></span>
         </div>
       </div>`;
   }).join('');
@@ -1809,7 +1591,7 @@ function abrirDetallePres(id) {
   const ejecARS = getEjecutadoARS(id);
   const pct = presARS ? Math.min(ejecARS/presARS*100, 100) : 0;
   const overBudget = ejecARS > presARS;
-  const barColor = overBudget ? 'hsl(var(--loss))' : pct > 80 ? '#e0905a' : 'hsl(var(--primary))';
+  const barColor = overBudget ? 'var(--red)' : pct > 80 ? '#e0905a' : 'var(--accent)';
 
   const ejecEnMoneda = arsAMonedaPres(ejecARS, moneda);
   const saldoEnMoneda = parseFloat(p.monto_total) - ejecEnMoneda;
@@ -1822,13 +1604,13 @@ function abrirDetallePres(id) {
   document.getElementById('pdTotal').textContent = fmtMonto(parseFloat(p.monto_total), moneda);
   document.getElementById('pdEjecutado').textContent = fmtMonto(ejecEnMoneda, moneda);
   document.getElementById('pdSaldo').textContent = fmtMonto(saldoEnMoneda, moneda);
-  document.getElementById('pdSaldo').style.color = saldoEnMoneda < 0 ? 'hsl(var(--loss))' : 'hsl(var(--gain))';
+  document.getElementById('pdSaldo').style.color = saldoEnMoneda < 0 ? 'var(--red)' : 'var(--green)';
 
   // Gastos asignados — mostrar en su moneda original + equivalente
   const gastosAsig = allGastos.filter(g => g.presupuesto_id === id);
   document.getElementById('pdGastos').innerHTML = gastosAsig.length
     ? `<table style="width:100%"><thead><tr>
-        <th>Fecha</th><th>Descripción</th><th>Proveedor</th><th style="text-align:right">Monto</th><th style="text-align:right;color:hsl(var(--muted))">En ${moneda}</th><th></th>
+        <th>Fecha</th><th>Descripción</th><th>Proveedor</th><th style="text-align:right">Monto</th><th style="text-align:right;color:var(--muted)">En ${moneda}</th><th></th>
       </tr></thead><tbody>${gastosAsig.map(g => {
         const gastoARS = gastoEnARS(g);
         const gastoEnMonedaPres = arsAMonedaPres(gastoARS, moneda);
@@ -1836,23 +1618,23 @@ function abrirDetallePres(id) {
         return `<tr>
           <td style="white-space:nowrap;font-size:12px">${fmtFecha(g.fecha)}</td>
           <td style="font-size:12px;max-width:240px">${g.descripcion||'—'}</td>
-          <td style="font-size:12px;color:hsl(var(--muted))">${g.proveedor||'—'}</td>
-          <td style="text-align:right;font-size:12px;color:hsl(var(--primary));white-space:nowrap">${fmtMonto(parseFloat(g.monto||0), g.moneda||'ARS')}</td>
-          <td style="text-align:right;font-size:11px;color:hsl(var(--muted));white-space:nowrap">${esMismaMoneda ? '—' : fmtMonto(gastoEnMonedaPres, moneda)}</td>
-          <td><button onclick="desasignarGasto('${g.id}')" style="background:none;border:none;cursor:pointer;color:hsl(var(--muted));font-size:13px;padding:2px 6px" title="Desasignar">✕</button></td>
+          <td style="font-size:12px;color:var(--muted)">${g.proveedor||'—'}</td>
+          <td style="text-align:right;font-size:12px;color:var(--accent);white-space:nowrap">${fmtMonto(parseFloat(g.monto||0), g.moneda||'ARS')}</td>
+          <td style="text-align:right;font-size:11px;color:var(--muted);white-space:nowrap">${esMismaMoneda ? '—' : fmtMonto(gastoEnMonedaPres, moneda)}</td>
+          <td><button onclick="desasignarGasto('${g.id}')" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:13px;padding:2px 6px" title="Desasignar">✕</button></td>
         </tr>`;
       }).join('')}</tbody></table>`
-    : '<div style="color:hsl(var(--muted));font-size:13px;padding:12px 0">Sin gastos asignados aún.</div>';
+    : '<div style="color:var(--muted);font-size:13px;padding:12px 0">Sin gastos asignados aún.</div>';
 
   // Botones editar/eliminar
   document.getElementById('pdGastos').innerHTML += `
     <div style="display:flex;gap:8px;margin-top:16px;padding-top:12px;border-top:1px solid var(--border)">
       <button class="btn" onclick="abrirModalPresupuesto('${id}')" style="font-size:11px;padding:4px 12px">✏ Editar presupuesto</button>
-      <button class="btn" onclick="eliminarPresupuesto('${id}');cerrarModalDetallePres()" style="font-size:11px;padding:4px 12px;color:hsl(var(--loss));border-color:hsl(0 72% 80%)">🗑 Eliminar</button>
+      <button class="btn" onclick="eliminarPresupuesto('${id}');cerrarModalDetallePres()" style="font-size:11px;padding:4px 12px;color:var(--red);border-color:rgba(224,90,90,0.3)">🗑 Eliminar</button>
     </div>`;
 
   document.getElementById('asignadorWrap').style.display = 'none';
-  document.getElementById('pdArchivos').innerHTML = '<div style="font-size:12px;color:hsl(var(--muted))">Cargando...</div>';
+  document.getElementById('pdArchivos').innerHTML = '<div style="font-size:12px;color:var(--muted)">Cargando...</div>';
   document.getElementById('modalPresupuestoDetalle').style.display = 'flex';
   document.body.style.overflow = 'hidden';
   cargarArchivosPresupuesto(id);
@@ -1902,16 +1684,16 @@ function filtrarAsignador() {
 
   document.getElementById('asignadorLista').innerHTML = filtrado.length
     ? filtrado.map(({g, score}) => `
-      <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid var(--border);transition:background 0.1s" onmouseover="this.style.background='hsl(var(--primary) / 0.05)'" onmouseout="this.style.background='transparent'">
-        ${score>0 ? '<span style="font-size:10px;color:hsl(var(--primary));background:hsl(var(--primary) / 0.08);padding:1px 5px;border-radius:3px;flex-shrink:0">sugerido</span>' : '<span style="width:55px;flex-shrink:0"></span>'}
+      <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid var(--border);transition:background 0.1s" onmouseover="this.style.background='rgba(200,181,96,0.06)'" onmouseout="this.style.background='transparent'">
+        ${score>0 ? '<span style="font-size:10px;color:var(--accent);background:rgba(200,181,96,0.1);padding:1px 5px;border-radius:3px;flex-shrink:0">sugerido</span>' : '<span style="width:55px;flex-shrink:0"></span>'}
         <div style="flex:1;min-width:0">
           <div style="font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${g.descripcion||'—'}</div>
-          <div style="font-size:11px;color:hsl(var(--muted))">${fmtFecha(g.fecha)} · ${g.proveedor||'—'}</div>
+          <div style="font-size:11px;color:var(--muted)">${fmtFecha(g.fecha)} · ${g.proveedor||'—'}</div>
         </div>
-        <div style="font-size:12px;color:hsl(var(--primary));white-space:nowrap;margin-right:8px">$${parseFloat(g.monto||0).toLocaleString('es-AR')}</div>
+        <div style="font-size:12px;color:var(--accent);white-space:nowrap;margin-right:8px">$${parseFloat(g.monto||0).toLocaleString('es-AR')}</div>
         <button class="btn primary" onclick="asignarGasto('${g.id}')" style="font-size:11px;padding:3px 10px;white-space:nowrap">Asignar</button>
       </div>`).join('')
-    : '<div style="padding:16px;text-align:center;color:hsl(var(--muted));font-size:12px">Sin gastos disponibles para asignar</div>';
+    : '<div style="padding:16px;text-align:center;color:var(--muted);font-size:12px">Sin gastos disponibles para asignar</div>';
 }
 
 async function asignarGasto(gastoId) {
@@ -1960,22 +1742,22 @@ async function cargarArchivosPresupuesto(presId) {
 function renderArchivosPresupuesto(archivos) {
   const el = document.getElementById('pdArchivos');
   if (!archivos.length) {
-    el.innerHTML = '<div style="font-size:12px;color:hsl(var(--muted));padding:4px 0">Sin archivos adjuntos aún.</div>';
+    el.innerHTML = '<div style="font-size:12px;color:var(--muted);padding:4px 0">Sin archivos adjuntos aún.</div>';
     return;
   }
   el.innerHTML = archivos.map(a => `
-    <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:hsl(var(--muted));border-radius:6px;margin-bottom:6px">
+    <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:var(--bg3);border-radius:6px;margin-bottom:6px">
       <span style="font-size:18px;flex-shrink:0">${archivoIcono(a.nombre_original)}</span>
       <div style="flex:1;min-width:0;cursor:pointer" onclick="abrirPreview('${a.archivo_url.replace(/'/g,"\\'")}','${a.nombre_original.replace(/'/g,"\\'")}')">
-        <div style="font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:hsl(var(--foreground));text-decoration:underline;text-decoration-color:var(--border)">${a.nombre_original}</div>
-        <div style="font-size:10px;color:hsl(var(--muted))">${fmtTamanio(a.tamanio)}</div>
+        <div style="font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text);text-decoration:underline;text-decoration-color:var(--border)">${a.nombre_original}</div>
+        <div style="font-size:10px;color:var(--muted)">${fmtTamanio(a.tamanio)}</div>
       </div>
-      <button onclick="abrirPreview('${a.archivo_url.replace(/'/g,"\\'")}','${a.nombre_original.replace(/'/g,"\\'")}')"  style="background:none;border:1px solid var(--border);border-radius:4px;cursor:pointer;color:hsl(var(--muted));font-size:12px;padding:3px 8px;flex-shrink:0;transition:all 0.15s" onmouseover="this.style.borderColor='hsl(var(--primary))';this.style.color='hsl(var(--primary))'" onmouseout="this.style.borderColor='var(--border)';this.style.color='hsl(var(--muted))'">👁 Preview</button>
-      <a href="${a.archivo_url}" target="_blank" style="color:hsl(var(--primary));font-size:11px;text-decoration:none;flex-shrink:0;padding:3px 8px;border:1px solid rgba(200,181,96,0.3);border-radius:4px" title="Abrir">↗ Abrir</a>
+      <button onclick="abrirPreview('${a.archivo_url.replace(/'/g,"\\'")}','${a.nombre_original.replace(/'/g,"\\'")}')"  style="background:none;border:1px solid var(--border);border-radius:4px;cursor:pointer;color:var(--muted);font-size:12px;padding:3px 8px;flex-shrink:0;transition:all 0.15s" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">👁 Preview</button>
+      <a href="${a.archivo_url}" target="_blank" style="color:var(--accent);font-size:11px;text-decoration:none;flex-shrink:0;padding:3px 8px;border:1px solid rgba(200,181,96,0.3);border-radius:4px" title="Abrir">↗ Abrir</a>
       <button onclick="eliminarArchivoPresupuesto('${a.id}','${a.nombre_original.replace(/'/g,"\\'")}','${a.presupuesto_id}')"
-        style="background:none;border:none;cursor:pointer;color:hsl(var(--muted));font-size:14px;padding:2px 4px;opacity:0.5;transition:opacity 0.15s;flex-shrink:0"
-        onmouseover="this.style.opacity='1';this.style.color='hsl(var(--loss))'"
-        onmouseout="this.style.opacity='0.5';this.style.color='hsl(var(--muted))'"
+        style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:14px;padding:2px 4px;opacity:0.5;transition:opacity 0.15s;flex-shrink:0"
+        onmouseover="this.style.opacity='1';this.style.color='#e05a5a'"
+        onmouseout="this.style.opacity='0.5';this.style.color='var(--muted)'"
         title="Eliminar">🗑</button>
     </div>`).join('');
 }
@@ -1984,7 +1766,7 @@ async function subirArchivosPresupuesto(files) {
   if (!presupuestoActivo || !files.length) return;
   const dropzone = document.getElementById('presDropzone');
   const originalHtml = dropzone.innerHTML;
-  dropzone.innerHTML = `<div style="font-size:12px;color:hsl(var(--muted));padding:4px 0"><div class="spinner" style="display:inline-block;margin-right:8px"></div>Subiendo ${files.length} archivo${files.length>1?'s':''}...</div>`;
+  dropzone.innerHTML = `<div style="font-size:12px;color:var(--muted);padding:4px 0"><div class="spinner" style="display:inline-block;margin-right:8px"></div>Subiendo ${files.length} archivo${files.length>1?'s':''}...</div>`;
   dropzone.style.pointerEvents = 'none';
 
   for (const file of Array.from(files)) {
@@ -2061,14 +1843,14 @@ function abrirPreview(url, nombre) {
   let contenido = '';
   if (tipo === 'imagen') {
     contenido = `<div style="display:flex;align-items:center;justify-content:center;padding:16px;background:#000;min-height:400px;border-radius:0 0 12px 12px">
-      <img src="${url}" style="max-width:100%;max-height:75vh;object-fit:contain;border-radius:4px" onerror="this.parentElement.innerHTML='<div style=color:hsl(var(--muted));padding:32px>No se pudo cargar la imagen.</div>'">
+      <img src="${url}" style="max-width:100%;max-height:75vh;object-fit:contain;border-radius:4px" onerror="this.parentElement.innerHTML='<div style=color:var(--muted);padding:32px>No se pudo cargar la imagen.</div>'">
     </div>`;
   } else if (tipo === 'pdf') {
     contenido = `<iframe src="${url}" style="width:100%;height:75vh;border:none;border-radius:0 0 12px 12px" onerror="this.style.display='none'"></iframe>`;
   } else {
     const gdocsUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`;
     contenido = `<iframe src="${gdocsUrl}" style="width:100%;height:75vh;border:none;border-radius:0 0 12px 12px"></iframe>
-    <div style="text-align:center;padding:8px;font-size:11px;color:hsl(var(--muted))">Vista previa via Google Docs Viewer · Si no carga, usá "↗ Abrir en nueva pestaña"</div>`;
+    <div style="text-align:center;padding:8px;font-size:11px;color:var(--muted)">Vista previa via Google Docs Viewer · Si no carga, usá "↗ Abrir en nueva pestaña"</div>`;
   }
 
   document.getElementById('previewContent').innerHTML = contenido;
@@ -2190,14 +1972,14 @@ function detectarDuplicados() {
 
   const container = document.getElementById('mergeGroups');
   if (!grupos.length) {
-    container.innerHTML = '<div style="font-size:12px;color:hsl(var(--gain));padding:8px 0;margin-bottom:8px">✅ No se detectaron proveedores duplicados</div>';
+    container.innerHTML = '<div style="font-size:12px;color:var(--green);padding:8px 0;margin-bottom:8px">✅ No se detectaron proveedores duplicados</div>';
     container.style.display = 'block';
     setTimeout(() => { container.style.display='none'; container.innerHTML=''; }, 3000);
     return;
   }
 
   container.innerHTML = `
-    <div style="font-size:11px;color:hsl(var(--muted));margin-bottom:10px">Se detectaron <strong style="color:hsl(var(--foreground))">${grupos.length}</strong> grupos de posibles duplicados. Hacé click en los nombres para seleccionarlos y unificarlos.</div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:10px">Se detectaron <strong style="color:var(--text)">${grupos.length}</strong> grupos de posibles duplicados. Hacé click en los nombres para seleccionarlos y unificarlos.</div>
     ${grupos.map((grupo, gi) => `
       <div class="merge-group" id="mgroup-${gi}">
         <div class="merge-group-title">Grupo ${gi+1} — elegí el nombre canónico:</div>
@@ -2205,7 +1987,7 @@ function detectarDuplicados() {
           ${grupo.map(p => `<span class="merge-chip" onclick="toggleMergeChip(${gi},'${p.replace(/'/g,"\\'")}',this)">${p}</span>`).join('')}
         </div>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-          <input id="mname-${gi}" placeholder="Nombre final..." value="${grupo[0]}" style="flex:1;min-width:150px;background:hsl(var(--muted));border:1px solid var(--border);border-radius:4px;padding:5px 10px;color:hsl(var(--foreground));font-family:var(--font);font-size:12px">
+          <input id="mname-${gi}" placeholder="Nombre final..." value="${grupo[0]}" style="flex:1;min-width:150px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:5px 10px;color:var(--text);font-family:var(--mono);font-size:12px">
           <button class="btn primary" onclick="ejecutarMerge(${gi})" style="font-size:11px;padding:5px 12px;white-space:nowrap">Unificar →</button>
           <button class="btn" onclick="document.getElementById('mgroup-${gi}').remove()" style="font-size:11px;padding:5px 10px">Ignorar</button>
         </div>
@@ -2272,7 +2054,7 @@ async function ejecutarMerge(gi) {
 
   // Refresh providers list
   await cargarConfig();
-  group.innerHTML = `<div style="font-size:12px;color:hsl(var(--gain));padding:4px 0">✅ Unificados ${nombresAReemplazar.length} nombres → "${nombreFinal}" (${actualizados} grupos actualizados)</div>`;
+  group.innerHTML = `<div style="font-size:12px;color:var(--green);padding:4px 0">✅ Unificados ${nombresAReemplazar.length} nombres → "${nombreFinal}" (${actualizados} grupos actualizados)</div>`;
   setTimeout(() => group.remove(), 2500);
 }
 
@@ -2283,66 +2065,67 @@ cargarTodo();
 </script>
 
 <!-- MODAL DETALLE -->
-<div id="modalOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center;padding:20px" onclick="cerrarModal()">
-  <div id="modalBox" style="background:hsl(var(--background));border:1px solid hsl(var(--border));border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,0.12);width:100%;max-width:640px;max-height:90vh;overflow-y:auto;padding:28px" onclick="event.stopPropagation()">
+<div id="modalOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:500;align-items:center;justify-content:center;padding:20px" onclick="cerrarModal()">
+  <div id="modalBox" style="background:var(--bg2);border:1px solid var(--border2);border-radius:12px;width:100%;max-width:640px;max-height:90vh;overflow-y:auto;padding:28px" onclick="event.stopPropagation()">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px">
-      <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.1em;color:hsl(var(--muted))" id="mFecha"></div>
-      <button onclick="cerrarModal()" style="background:none;border:none;color:hsl(var(--muted));cursor:pointer;font-size:20px;line-height:1">✕</button>
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted)" id="mFecha"></div>
+      <button onclick="cerrarModal()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:20px;line-height:1">✕</button>
     </div>
-    <div style="font-size:16px;font-weight:500;color:hsl(var(--foreground));margin-bottom:16px;line-height:1.4" id="mDesc"></div>
+    <div style="font-size:16px;font-weight:500;color:var(--text);margin-bottom:16px;line-height:1.4" id="mDesc"></div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px">
-      <div style="background:hsl(var(--surface));border:1px solid hsl(var(--border));border-radius:8px;padding:12px 14px">
-        <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:hsl(var(--muted));margin-bottom:4px">Monto</div>
-        <div style="font-size:20px;font-weight:500;color:hsl(var(--primary))" id="mMonto"></div>
-        <div style="font-size:12px;color:hsl(var(--muted))" id="mMontoUSD"></div>
+      <div style="background:var(--bg3);border-radius:8px;padding:12px 14px">
+        <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:4px">Monto</div>
+        <div style="font-size:20px;font-weight:500;color:var(--accent)" id="mMonto"></div>
+        <div style="font-size:12px;color:var(--muted)" id="mMontoUSD"></div>
       </div>
-      <div style="background:hsl(var(--surface));border:1px solid hsl(var(--border));border-radius:8px;padding:12px 14px">
-        <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:hsl(var(--muted));margin-bottom:4px">Centro de costo</div>
-        <div style="font-size:13px;color:hsl(var(--foreground))" id="mCentro"></div>
+      <div style="background:var(--bg3);border-radius:8px;padding:12px 14px">
+        <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:4px">Centro de costo</div>
+        <div style="font-size:13px;color:var(--text)" id="mCentro"></div>
       </div>
-      <div style="background:hsl(var(--surface));border:1px solid hsl(var(--border));border-radius:8px;padding:12px 14px">
-        <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:hsl(var(--muted));margin-bottom:4px">Proveedor</div>
-        <div style="font-size:13px;color:hsl(var(--foreground))" id="mProveedor"></div>
+      <div style="background:var(--bg3);border-radius:8px;padding:12px 14px">
+        <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:4px">Proveedor</div>
+        <div style="font-size:13px;color:var(--text)" id="mProveedor"></div>
       </div>
-      <div style="background:hsl(var(--surface));border:1px solid hsl(var(--border));border-radius:8px;padding:12px 14px">
-        <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:hsl(var(--muted));margin-bottom:4px">Pagado por</div>
-        <div style="font-size:13px;color:hsl(var(--foreground))" id="mPagadoPor"></div>
+      <div style="background:var(--bg3);border-radius:8px;padding:12px 14px">
+        <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:4px">Pagado por</div>
+        <div style="font-size:13px;color:var(--text)" id="mPagadoPor"></div>
       </div>
-      <div style="background:hsl(var(--surface));border:1px solid hsl(var(--border));border-radius:8px;padding:12px 14px">
-        <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:hsl(var(--muted));margin-bottom:4px">Categoría</div>
-        <div style="font-size:13px;color:hsl(var(--foreground))" id="mCat"></div>
+      <div style="background:var(--bg3);border-radius:8px;padding:12px 14px">
+        <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:4px">Categoría</div>
+        <div style="font-size:13px;color:var(--text)" id="mCat"></div>
       </div>
-      <div style="background:hsl(var(--surface));border:1px solid hsl(var(--border));border-radius:8px;padding:12px 14px">
-        <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:hsl(var(--muted));margin-bottom:4px">Fuente</div>
-        <div style="font-size:13px;color:hsl(var(--foreground))" id="mFuente"></div>
+      <div style="background:var(--bg3);border-radius:8px;padding:12px 14px">
+        <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:4px">Fuente</div>
+        <div style="font-size:13px;color:var(--text)" id="mFuente"></div>
       </div>
     </div>
     <div id="mMensajeOriginal" style="margin-bottom:16px"></div>
     <div id="mComprobante"></div>
   </div>
 </div>
+
 <!-- MODAL DETALLE CATEGORIA -->
-<div id="modalCatOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:550;align-items:center;justify-content:center;padding:20px" onclick="cerrarModalCat()">
-  <div style="background:hsl(var(--background));border:1px solid hsl(var(--border));border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,0.12);width:100%;max-width:680px;max-height:85vh;overflow-y:auto;padding:28px" onclick="event.stopPropagation()">
+<div id="modalCatOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:550;align-items:center;justify-content:center;padding:20px" onclick="cerrarModalCat()">
+  <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:12px;width:100%;max-width:680px;max-height:85vh;overflow-y:auto;padding:28px" onclick="event.stopPropagation()">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
       <div>
-        <div style="font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:hsl(var(--muted));margin-bottom:4px" id="modalCatCentro"></div>
-        <div style="font-size:16px;font-weight:500;color:hsl(210 80% 45%)" id="modalCatNombre"></div>
+        <div style="font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:4px" id="modalCatCentro"></div>
+        <div style="font-size:16px;font-weight:500;color:var(--blue)" id="modalCatNombre"></div>
       </div>
-      <button onclick="cerrarModalCat()" style="background:none;border:none;color:hsl(var(--muted));cursor:pointer;font-size:20px;line-height:1">✕</button>
+      <button onclick="cerrarModalCat()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:20px;line-height:1">✕</button>
     </div>
     <div style="display:flex;gap:16px;margin-bottom:20px">
-      <div style="background:hsl(var(--muted));border-radius:8px;padding:12px 16px;flex:1">
-        <div style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:hsl(var(--muted));margin-bottom:4px">Total</div>
-        <div style="font-size:18px;font-weight:500;color:hsl(210 80% 45%);font-family:'Inter',sans-serif" id="modalCatTotal"></div>
+      <div style="background:var(--bg3);border-radius:8px;padding:12px 16px;flex:1">
+        <div style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:4px">Total</div>
+        <div style="font-size:18px;font-weight:500;color:var(--blue);font-family:'IBM Plex Mono',monospace" id="modalCatTotal"></div>
       </div>
-      <div style="background:hsl(var(--muted));border-radius:8px;padding:12px 16px;flex:1">
-        <div style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:hsl(var(--muted));margin-bottom:4px">Cantidad</div>
-        <div style="font-size:18px;font-weight:500;color:hsl(var(--foreground));font-family:'Inter',sans-serif" id="modalCatCant"></div>
+      <div style="background:var(--bg3);border-radius:8px;padding:12px 16px;flex:1">
+        <div style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:4px">Cantidad</div>
+        <div style="font-size:18px;font-weight:500;color:var(--text);font-family:'IBM Plex Mono',monospace" id="modalCatCant"></div>
       </div>
-      <div style="background:hsl(var(--muted));border-radius:8px;padding:12px 16px;flex:1">
-        <div style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:hsl(var(--muted));margin-bottom:4px">Promedio</div>
-        <div style="font-size:18px;font-weight:500;color:hsl(var(--foreground));font-family:'Inter',sans-serif" id="modalCatProm"></div>
+      <div style="background:var(--bg3);border-radius:8px;padding:12px 16px;flex:1">
+        <div style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:4px">Promedio</div>
+        <div style="font-size:18px;font-weight:500;color:var(--text);font-family:'IBM Plex Mono',monospace" id="modalCatProm"></div>
       </div>
     </div>
     <div id="modalCatLista"></div>
@@ -2359,27 +2142,25 @@ function abrirDetalleCat(cat) {
   document.getElementById('modalCatCant').textContent = gastos.length + ' gasto' + (gastos.length !== 1 ? 's' : '');
   document.getElementById('modalCatProm').textContent = gastos.length ? '$' + Math.round(total / gastos.length).toLocaleString('es-AR') : '—';
   document.getElementById('modalCatLista').innerHTML = `
-    <div style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:hsl(var(--muted));margin-bottom:10px">Detalle de gastos</div>
+    <div style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:10px">Detalle de gastos</div>
     ${gastos.sort((a,b) => new Date(b.fecha) - new Date(a.fecha)).map(g => `
       <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);cursor:pointer" onclick="cerrarModalCat();abrirDetalle('${g.id}')">
         <div style="flex:1;min-width:0">
-          <div style="font-size:12px;color:hsl(var(--foreground));white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${g.descripcion||'—'}</div>
-          <div style="font-size:11px;color:hsl(var(--muted));margin-top:2px">${fmtFecha(g.fecha)}${g.proveedor ? ' · ' + g.proveedor : ''}</div>
+          <div style="font-size:12px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${g.descripcion||'—'}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px">${fmtFecha(g.fecha)}${g.proveedor ? ' · ' + g.proveedor : ''}</div>
         </div>
-        <div style="font-size:13px;font-weight:500;color:${g.moneda==='USD'?'hsl(var(--gain))':'hsl(var(--primary))'};font-family:'Inter',sans-serif;white-space:nowrap">
+        <div style="font-size:13px;font-weight:500;color:${g.moneda==='USD'?'var(--green)':'var(--accent)'};font-family:'IBM Plex Mono',monospace;white-space:nowrap">
           ${g.moneda==='USD' ? 'USD ' : '$'}${parseFloat(g.monto||0).toLocaleString('es-AR')}
         </div>
         ${g.imagen_url||g.comprobante ? '<span style="font-size:14px" title="Tiene comprobante">📎</span>' : ''}
-      </div>`).join('') || '<div style="color:hsl(var(--muted));font-size:12px;padding:16px 0">Sin gastos</div>'}
+      </div>`).join('') || '<div style="color:var(--muted);font-size:12px;padding:16px 0">Sin gastos</div>'}
   `;
-  const overlay = document.getElementById('modalCatOverlay');
-  overlay.style.display = 'flex';
+  document.getElementById('modalCatOverlay').style.display = 'flex';
 }
 
 function cerrarModalCat() {
   document.getElementById('modalCatOverlay').style.display = 'none';
 }
 </script>
-
 </body>
 </html>
