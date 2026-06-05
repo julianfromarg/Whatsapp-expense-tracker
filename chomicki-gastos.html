@@ -534,6 +534,20 @@
   </div>
 </div>
 
+<!-- MODAL PREVIEW ARCHIVO -->
+<div id="modalPreview" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:700;align-items:center;justify-content:center;padding:20px" onclick="cerrarPreview()">
+  <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:12px;width:100%;max-width:900px;max-height:92vh;display:flex;flex-direction:column" onclick="event.stopPropagation()">
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 20px;border-bottom:1px solid var(--border);flex-shrink:0">
+      <div style="font-size:13px;color:var(--text);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-right:12px" id="previewNombre"></div>
+      <div style="display:flex;gap:8px;flex-shrink:0">
+        <a id="previewAbrirBtn" href="#" target="_blank" class="btn" style="font-size:11px;padding:4px 12px">↗ Abrir en nueva pestaña</a>
+        <button onclick="cerrarPreview()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:20px;line-height:1">✕</button>
+      </div>
+    </div>
+    <div id="previewContent" style="flex:1;overflow:auto;min-height:0;border-radius:0 0 12px 12px"></div>
+  </div>
+</div>
+
 <!-- CONFIG -->
 <div id="page-config" class="page">
   <div style="max-width:900px">
@@ -1280,6 +1294,7 @@ document.addEventListener('keydown', e => {
     cerrarModal();
     cerrarModalPresupuesto();
     cerrarModalDetallePres();
+    cerrarPreview();
   }
 });
 
@@ -1651,10 +1666,11 @@ function renderArchivosPresupuesto(archivos) {
   el.innerHTML = archivos.map(a => `
     <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:var(--bg3);border-radius:6px;margin-bottom:6px">
       <span style="font-size:18px;flex-shrink:0">${archivoIcono(a.nombre_original)}</span>
-      <div style="flex:1;min-width:0">
-        <div style="font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text)">${a.nombre_original}</div>
+      <div style="flex:1;min-width:0;cursor:pointer" onclick="abrirPreview('${a.archivo_url.replace(/'/g,"\\'")}','${a.nombre_original.replace(/'/g,"\\'")}')">
+        <div style="font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text);text-decoration:underline;text-decoration-color:var(--border)">${a.nombre_original}</div>
         <div style="font-size:10px;color:var(--muted)">${fmtTamanio(a.tamanio)}</div>
       </div>
+      <button onclick="abrirPreview('${a.archivo_url.replace(/'/g,"\\'")}','${a.nombre_original.replace(/'/g,"\\'")}')"  style="background:none;border:1px solid var(--border);border-radius:4px;cursor:pointer;color:var(--muted);font-size:12px;padding:3px 8px;flex-shrink:0;transition:all 0.15s" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">👁 Preview</button>
       <a href="${a.archivo_url}" target="_blank" style="color:var(--accent);font-size:11px;text-decoration:none;flex-shrink:0;padding:3px 8px;border:1px solid rgba(200,181,96,0.3);border-radius:4px" title="Abrir">↗ Abrir</a>
       <button onclick="eliminarArchivoPresupuesto('${a.id}','${a.nombre_original.replace(/'/g,"\\'")}','${a.presupuesto_id}')"
         style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:14px;padding:2px 4px;opacity:0.5;transition:opacity 0.15s;flex-shrink:0"
@@ -1726,6 +1742,44 @@ async function eliminarArchivoPresupuesto(archivoId, nombreOriginal, presId) {
   });
 
   await cargarArchivosPresupuesto(presId);
+}
+
+// ---- FILE PREVIEW ----
+function tipoPreview(nombre) {
+  const ext = (nombre.split('.').pop() || '').toLowerCase();
+  if (['jpg','jpeg','png','gif','webp','heic'].includes(ext)) return 'imagen';
+  if (ext === 'pdf') return 'pdf';
+  if (['xls','xlsx','doc','docx','ppt','pptx','txt','csv','md'].includes(ext)) return 'gdocs';
+  return 'gdocs'; // fallback: try google docs viewer
+}
+
+function abrirPreview(url, nombre) {
+  const tipo = tipoPreview(nombre);
+  document.getElementById('previewNombre').textContent = nombre;
+  document.getElementById('previewAbrirBtn').href = url;
+
+  let contenido = '';
+  if (tipo === 'imagen') {
+    contenido = `<div style="display:flex;align-items:center;justify-content:center;padding:16px;background:#000;min-height:400px;border-radius:0 0 12px 12px">
+      <img src="${url}" style="max-width:100%;max-height:75vh;object-fit:contain;border-radius:4px" onerror="this.parentElement.innerHTML='<div style=color:var(--muted);padding:32px>No se pudo cargar la imagen.</div>'">
+    </div>`;
+  } else if (tipo === 'pdf') {
+    contenido = `<iframe src="${url}" style="width:100%;height:75vh;border:none;border-radius:0 0 12px 12px" onerror="this.style.display='none'"></iframe>`;
+  } else {
+    const gdocsUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`;
+    contenido = `<iframe src="${gdocsUrl}" style="width:100%;height:75vh;border:none;border-radius:0 0 12px 12px"></iframe>
+    <div style="text-align:center;padding:8px;font-size:11px;color:var(--muted)">Vista previa via Google Docs Viewer · Si no carga, usá "↗ Abrir en nueva pestaña"</div>`;
+  }
+
+  document.getElementById('previewContent').innerHTML = contenido;
+  document.getElementById('modalPreview').style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+
+function cerrarPreview() {
+  document.getElementById('modalPreview').style.display = 'none';
+  document.getElementById('previewContent').innerHTML = ''; // stop iframe loading
+  document.body.style.overflow = '';
 }
 
 // ---- FUZZY MATCH ----
