@@ -601,12 +601,19 @@ let tc = 1200;
 // ---- TIPO DE CAMBIO ----
 async function fetchTC() {
   try {
-    const r = await fetch('https://api.bluelytics.com.ar/v2/latest');
+    const r = await fetch('https://dolarapi.com/v1/dolares/blue');
     const d = await r.json();
-    tc = d.blue?.sell || 1200;
+    tc = d.venta || d.compra || 1200;
     document.getElementById('tcValor').textContent = '$' + Math.round(tc).toLocaleString('es-AR');
   } catch {
-    document.getElementById('tcValor').textContent = 'N/D';
+    try {
+      const r2 = await fetch('https://api.bluelytics.com.ar/v2/latest');
+      const d2 = await r2.json();
+      tc = d2.blue?.sell || 1200;
+      document.getElementById('tcValor').textContent = '$' + Math.round(tc).toLocaleString('es-AR');
+    } catch {
+      document.getElementById('tcValor').textContent = 'N/D';
+    }
   }
 }
 async function actualizarTC() {
