@@ -1327,8 +1327,32 @@ async function cargarPresupuestos() {
   renderPresupuestos();
 }
 
-function getEjecutado(presId) {
-  return allGastos.filter(g => g.presupuesto_id === presId).reduce((s,g) => s+(parseFloat(g.monto)||0), 0);
+// Convierte un gasto a ARS usando tc
+function gastoEnARS(g) {
+  const monto = parseFloat(g.monto) || 0;
+  return g.moneda === 'USD' ? monto * tc : monto;
+}
+
+// Devuelve ejecutado en ARS (normalizado)
+function getEjecutadoARS(presId) {
+  return allGastos.filter(g => g.presupuesto_id === presId).reduce((s,g) => s + gastoEnARS(g), 0);
+}
+
+// Devuelve el monto del presupuesto en ARS (para comparar)
+function presupuestoEnARS(p) {
+  const monto = parseFloat(p.monto_total) || 0;
+  return p.moneda === 'USD' ? monto * tc : monto;
+}
+
+// Formatea monto con su moneda
+function fmtMonto(monto, moneda) {
+  if (moneda === 'USD') return 'USD ' + Math.round(monto).toLocaleString('es-AR');
+  return '$' + Math.round(monto).toLocaleString('es-AR');
+}
+
+// Convierte ARS a la moneda del presupuesto
+function arsAMonedaPres(arsAmount, moneda) {
+  return moneda === 'USD' ? arsAmount / tc : arsAmount;
 }
 
 function renderPresupuestos() {
@@ -1338,24 +1362,33 @@ function renderPresupuestos() {
     document.getElementById('presupStats').textContent = '';
     return;
   }
-  const totalPres = allPresupuestos.reduce((s,p) => s+(parseFloat(p.monto_total)||0), 0);
-  const totalEjec = allPresupuestos.reduce((s,p) => s+getEjecutado(p.id), 0);
-  const pct = totalPres ? Math.round(totalEjec/totalPres*100) : 0;
-  document.getElementById('presupStats').textContent = `${allPresupuestos.length} presupuestos · $${Math.round(totalPres).toLocaleString('es-AR')} total · ${pct}% ejecutado`;
+
+  // Stats header: todo en ARS para el resumen general
+  const totalPresARS = allPresupuestos.reduce((s,p) => s + presupuestoEnARS(p), 0);
+  const totalEjecARS = allPresupuestos.reduce((s,p) => s + getEjecutadoARS(p.id), 0);
+  const pctTotal = totalPresARS ? Math.round(totalEjecARS/totalPresARS*100) : 0;
+  document.getElementById('presupStats').textContent = `${allPresupuestos.length} presupuestos · $${Math.round(totalPresARS).toLocaleString('es-AR')} total (ARS) · ${pctTotal}% ejecutado`;
 
   container.innerHTML = allPresupuestos.map(p => {
-    const ejecutado = getEjecutado(p.id);
-    const pct = p.monto_total ? Math.min(ejecutado/p.monto_total*100, 100) : 0;
-    const overBudget = ejecutado > p.monto_total;
-    const saldo = parseFloat(p.monto_total) - ejecutado;
+    const moneda = p.moneda || 'ARS';
+    const presARS = presupuestoEnARS(p);
+    const ejecARS = getEjecutadoARS(p.id);
+    const pct = presARS ? Math.min(ejecARS/presARS*100, 100) : 0;
+    const overBudget = ejecARS > presARS;
     const barColor = overBudget ? 'var(--red)' : pct > 80 ? '#e0905a' : 'var(--accent)';
     const nGastos = allGastos.filter(g => g.presupuesto_id === p.id).length;
+
+    // Mostrar montos en la moneda del presupuesto
+    const ejecEnMoneda = arsAMonedaPres(ejecARS, moneda);
+    const saldoEnMoneda = parseFloat(p.monto_total) - ejecEnMoneda;
+    const monedaLabel = moneda === 'USD' ? 'USD' : 'ARS';
+
     return `
       <div class="pres-card" onclick="abrirDetallePres('${p.id}')">
         <div class="pres-header">
           <div>
             <div class="pres-name">${p.nombre}</div>
-            <div class="pres-meta">${[p.centro_costo, p.proveedor].filter(Boolean).join(' · ') || 'Sin categorizar'} · ${nGastos} gasto${nGastos!==1?'s':''}</div>
+            <div class="pres-meta">${[p.centro_costo, p.proveedor].filter(Boolean).join(' · ') || 'Sin categorizar'} · ${nGastos} gasto${nGastos!==1?'s':''} · <span style="color:var(--accent);font-size:10px">${monedaLabel}</span></div>
           </div>
           <div style="text-align:right;flex-shrink:0">
             <div style="font-size:18px;font-weight:500;color:${barColor}">${Math.round(pct)}%</div>
@@ -1366,9 +1399,9 @@ function renderPresupuestos() {
           <div class="pres-track"><div class="pres-fill" style="width:${pct}%;background:${barColor}"></div></div>
         </div>
         <div class="pres-nums">
-          <span style="color:var(--muted)">Presupuesto: <span style="color:var(--text)">$${Math.round(parseFloat(p.monto_total)).toLocaleString('es-AR')}</span></span>
-          <span style="color:var(--muted)">Ejecutado: <span style="color:var(--accent)">$${Math.round(ejecutado).toLocaleString('es-AR')}</span></span>
-          <span style="color:var(--muted)">Saldo: <span style="color:${saldo<0?'var(--red)':'var(--green)'}">$${Math.round(saldo).toLocaleString('es-AR')}</span></span>
+          <span style="color:var(--muted)">Presupuesto: <span style="color:var(--text)">${fmtMonto(parseFloat(p.monto_total), moneda)}</span></span>
+          <span style="color:var(--muted)">Ejecutado: <span style="color:var(--accent)">${fmtMonto(ejecEnMoneda, moneda)}</span></span>
+          <span style="color:var(--muted)">Saldo: <span style="color:${saldoEnMoneda<0?'var(--red)':'var(--green)'}">${fmtMonto(saldoEnMoneda, moneda)}</span></span>
         </div>
       </div>`;
   }).join('');
@@ -1456,34 +1489,44 @@ function abrirDetallePres(id) {
   if (!p) return;
   presupuestoActivo = p;
 
-  const ejecutado = getEjecutado(id);
-  const pct = p.monto_total ? Math.min(ejecutado/p.monto_total*100, 100) : 0;
-  const overBudget = ejecutado > parseFloat(p.monto_total);
-  const saldo = parseFloat(p.monto_total) - ejecutado;
+  const moneda = p.moneda || 'ARS';
+  const presARS = presupuestoEnARS(p);
+  const ejecARS = getEjecutadoARS(id);
+  const pct = presARS ? Math.min(ejecARS/presARS*100, 100) : 0;
+  const overBudget = ejecARS > presARS;
   const barColor = overBudget ? 'var(--red)' : pct > 80 ? '#e0905a' : 'var(--accent)';
+
+  const ejecEnMoneda = arsAMonedaPres(ejecARS, moneda);
+  const saldoEnMoneda = parseFloat(p.monto_total) - ejecEnMoneda;
 
   document.getElementById('pdNombre').textContent = p.nombre;
   document.getElementById('pdMeta').textContent = [p.centro_costo, p.proveedor, p.descripcion].filter(Boolean).join(' · ');
   document.getElementById('pdPct').textContent = Math.round(pct) + '% ejecutado';
   document.getElementById('pdBar').style.width = pct + '%';
   document.getElementById('pdBar').style.background = barColor;
-  document.getElementById('pdTotal').textContent = '$' + Math.round(parseFloat(p.monto_total)).toLocaleString('es-AR');
-  document.getElementById('pdEjecutado').textContent = '$' + Math.round(ejecutado).toLocaleString('es-AR');
-  document.getElementById('pdSaldo').textContent = '$' + Math.round(saldo).toLocaleString('es-AR');
-  document.getElementById('pdSaldo').style.color = saldo < 0 ? 'var(--red)' : 'var(--green)';
+  document.getElementById('pdTotal').textContent = fmtMonto(parseFloat(p.monto_total), moneda);
+  document.getElementById('pdEjecutado').textContent = fmtMonto(ejecEnMoneda, moneda);
+  document.getElementById('pdSaldo').textContent = fmtMonto(saldoEnMoneda, moneda);
+  document.getElementById('pdSaldo').style.color = saldoEnMoneda < 0 ? 'var(--red)' : 'var(--green)';
 
-  // Gastos asignados
+  // Gastos asignados — mostrar en su moneda original + equivalente
   const gastosAsig = allGastos.filter(g => g.presupuesto_id === id);
   document.getElementById('pdGastos').innerHTML = gastosAsig.length
     ? `<table style="width:100%"><thead><tr>
-        <th>Fecha</th><th>Descripción</th><th>Proveedor</th><th style="text-align:right">Monto</th><th></th>
-      </tr></thead><tbody>${gastosAsig.map(g => `<tr>
-        <td style="white-space:nowrap;font-size:12px">${fmtFecha(g.fecha)}</td>
-        <td style="font-size:12px;max-width:260px">${g.descripcion||'—'}</td>
-        <td style="font-size:12px;color:var(--muted)">${g.proveedor||'—'}</td>
-        <td style="text-align:right;font-size:12px;color:var(--accent);white-space:nowrap">$${parseFloat(g.monto||0).toLocaleString('es-AR')}</td>
-        <td><button onclick="desasignarGasto('${g.id}')" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:13px;padding:2px 6px" title="Desasignar">✕</button></td>
-      </tr>`).join('')}</tbody></table>`
+        <th>Fecha</th><th>Descripción</th><th>Proveedor</th><th style="text-align:right">Monto</th><th style="text-align:right;color:var(--muted)">En ${moneda}</th><th></th>
+      </tr></thead><tbody>${gastosAsig.map(g => {
+        const gastoARS = gastoEnARS(g);
+        const gastoEnMonedaPres = arsAMonedaPres(gastoARS, moneda);
+        const esMismaMoneda = (g.moneda || 'ARS') === moneda;
+        return `<tr>
+          <td style="white-space:nowrap;font-size:12px">${fmtFecha(g.fecha)}</td>
+          <td style="font-size:12px;max-width:240px">${g.descripcion||'—'}</td>
+          <td style="font-size:12px;color:var(--muted)">${g.proveedor||'—'}</td>
+          <td style="text-align:right;font-size:12px;color:var(--accent);white-space:nowrap">${fmtMonto(parseFloat(g.monto||0), g.moneda||'ARS')}</td>
+          <td style="text-align:right;font-size:11px;color:var(--muted);white-space:nowrap">${esMismaMoneda ? '—' : fmtMonto(gastoEnMonedaPres, moneda)}</td>
+          <td><button onclick="desasignarGasto('${g.id}')" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:13px;padding:2px 6px" title="Desasignar">✕</button></td>
+        </tr>`;
+      }).join('')}</tbody></table>`
     : '<div style="color:var(--muted);font-size:13px;padding:12px 0">Sin gastos asignados aún.</div>';
 
   // Botones editar/eliminar
