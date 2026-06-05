@@ -143,6 +143,19 @@
   .step-dot.done { background: var(--accent); border-color: var(--accent); color: var(--bg); }
   .step-dot.active { border-color: var(--accent); color: var(--accent); }
 
+  /* FUZZY MATCH */
+  .prov-wrap { position: relative; }
+  .prov-suggestions { position: absolute; top: 100%; left: 0; right: 0; background: var(--bg2); border: 1px solid var(--border2); border-radius: 6px; z-index: 200; max-height: 180px; overflow-y: auto; margin-top: 2px; box-shadow: 0 8px 24px rgba(0,0,0,0.4); }
+  .prov-sug-item { padding: 8px 12px; cursor: pointer; font-size: 12px; display: flex; align-items: center; justify-content: space-between; transition: background 0.1s; }
+  .prov-sug-item:hover { background: rgba(200,181,96,0.1); }
+  .prov-sug-score { font-size: 10px; color: var(--muted); margin-left: 8px; flex-shrink: 0; }
+  .prov-sug-header { padding: 6px 12px 4px; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); border-bottom: 1px solid var(--border); }
+  .merge-group { background: rgba(200,181,96,0.05); border: 1px solid rgba(200,181,96,0.2); border-radius: 8px; padding: 12px 14px; margin-bottom: 10px; }
+  .merge-group-title { font-size: 11px; color: var(--muted); margin-bottom: 8px; }
+  .merge-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+  .merge-chip { background: var(--bg3); border: 1px solid var(--border); border-radius: 4px; padding: 3px 8px; font-size: 11px; cursor: pointer; transition: all 0.15s; }
+  .merge-chip.selected { border-color: var(--accent); color: var(--accent); background: rgba(200,181,96,0.1); }
+
   @media (max-width: 768px) {
     nav { padding: 12px 16px; }
     .page { padding: 16px; }
@@ -318,7 +331,10 @@
         </div>
         <div class="form-group">
           <label>Proveedor</label>
-          <input type="text" id="cProv" placeholder="Nombre del proveedor">
+          <div class="prov-wrap">
+            <input type="text" id="cProv" placeholder="Nombre del proveedor" autocomplete="off" oninput="onProvInput(this,'cProvSug')" onblur="setTimeout(()=>hideSug('cProvSug'),150)">
+            <div class="prov-suggestions" id="cProvSug" style="display:none"></div>
+          </div>
         </div>
         <div class="form-group">
           <label>Pagado por</label>
@@ -382,8 +398,12 @@
       <!-- PROVEEDORES -->
       <div class="card">
         <div class="card-title">Proveedores <span id="provCount" style="color:var(--muted)"></span>
-          <button class="btn" onclick="agregarProveedor()" style="font-size:11px;padding:4px 10px">+ Nuevo</button>
+          <div style="display:flex;gap:6px">
+            <button class="btn" onclick="detectarDuplicados()" style="font-size:11px;padding:4px 10px">🔍 Duplicados</button>
+            <button class="btn" onclick="agregarProveedor()" style="font-size:11px;padding:4px 10px">+ Nuevo</button>
+          </div>
         </div>
+        <div id="mergeGroups" style="display:none;margin-bottom:12px"></div>
         <div id="listaProveedores"></div>
       </div>
 
@@ -849,7 +869,12 @@ function renderHistorialTabla() {
             ${['Infraestructura agua y cloacas','Infraestructura gas','Infraestructura electricidad','Albañilería / obra civil','Honorarios profesionales','Trámites / legal','Otros'].map(c=>`<option ${c===g.centro_costo?'selected':''}>${c}</option>`).join('')}
           </select></td>
           <td><input value="${(g.descripcion||'').replace(/"/g,"'")}" style="width:190px;background:transparent;border:none;border-bottom:1px dashed var(--border);color:var(--text);font-family:var(--mono);font-size:12px;padding:2px 4px" onchange="hGastos[${i}].descripcion=this.value"></td>
-          <td><input value="${g.proveedor||''}" style="width:120px;background:transparent;border:none;border-bottom:1px dashed var(--border);color:var(--muted);font-family:var(--mono);font-size:12px;padding:2px 4px" onchange="hGastos[${i}].proveedor=this.value"></td>
+          <td><input value="${g.proveedor||''}" id="hprov-${i}" style="width:120px;background:transparent;border:none;border-bottom:1px dashed var(--border);color:var(--muted);font-family:var(--mono);font-size:12px;padding:2px 4px" 
+            oninput="hGastos[${i}].proveedor=this.value;onProvInput(this,'hprovsug-${i}')" 
+            onblur="setTimeout(()=>hideSug('hprovsug-${i}'),150)"
+            onchange="hGastos[${i}].proveedor=this.value">
+            <div class="prov-suggestions" id="hprovsug-${i}" style="display:none;width:200px"></div>
+          </td>
           <td><button onclick="hGastos[${i}]._skip=!hGastos[${i}]._skip;this.closest('tr').style.opacity=hGastos[${i}]._skip?'0.3':'1'" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:14px" title="Omitir">✕</button></td>
         </tr>`;
       }).join('')}</tbody>
@@ -1095,6 +1120,190 @@ async function actualizarCampo(id, campo, valor) {
   });
   const g = allGastos.find(x => x.id === id);
   if (g) g[campo] = valor;
+}
+
+// ---- FUZZY MATCH ----
+
+function levenshtein(a, b) {
+  a = a.toLowerCase(); b = b.toLowerCase();
+  const m = a.length, n = b.length;
+  const dp = Array.from({length: m+1}, (_,i) => Array.from({length: n+1}, (_,j) => i===0?j:j===0?i:0));
+  for (let i = 1; i <= m; i++)
+    for (let j = 1; j <= n; j++)
+      dp[i][j] = a[i-1]===b[j-1] ? dp[i-1][j-1] : 1 + Math.min(dp[i-1][j], dp[i][j-1], dp[i-1][j-1]);
+  return dp[m][n];
+}
+
+function tokenSimilarity(a, b) {
+  // Normalize: lowercase, remove accents, split tokens
+  const norm = s => s.toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .replace(/[^a-z0-9\s]/g,' ').trim();
+  const tokens = s => norm(s).split(/\s+/).filter(t => t.length > 1);
+  const ta = tokens(a), tb = tokens(b);
+  if (!ta.length || !tb.length) return 0;
+
+  // Token overlap score
+  let overlap = 0;
+  ta.forEach(t => {
+    const best = Math.min(...tb.map(t2 => levenshtein(t, t2)));
+    const maxLen = Math.max(t.length, ...tb.map(t2=>t2.length));
+    if (best <= Math.floor(t.length * 0.3)) overlap++;
+  });
+  const tokenScore = overlap / Math.max(ta.length, tb.length);
+
+  // Full string edit distance score
+  const na = norm(a), nb = norm(b);
+  const editScore = 1 - levenshtein(na, nb) / Math.max(na.length, nb.length, 1);
+
+  return Math.max(tokenScore, editScore * 0.9);
+}
+
+function fuzzyMatch(input, candidates, threshold = 0.55) {
+  if (!input || input.length < 2) return [];
+  return candidates
+    .map(c => ({ name: c, score: tokenSimilarity(input, c) }))
+    .filter(x => x.score >= threshold && x.name.toLowerCase() !== input.toLowerCase())
+    .sort((a,b) => b.score - a.score)
+    .slice(0, 5);
+}
+
+function onProvInput(inputEl, sugId) {
+  const val = inputEl.value.trim();
+  const sugEl = document.getElementById(sugId);
+  if (!sugEl) return;
+  if (val.length < 2) { sugEl.style.display = 'none'; return; }
+
+  const matches = fuzzyMatch(val, window.proveedoresList || []);
+  if (!matches.length) { sugEl.style.display = 'none'; return; }
+
+  sugEl.innerHTML = `<div class="prov-sug-header">Proveedores similares</div>` +
+    matches.map(m => `
+      <div class="prov-sug-item" onmousedown="seleccionarSugerencia(event,'${inputEl.id}','${sugId}','${m.name.replace(/'/g,"\\'")}')">
+        <span>${m.name}</span>
+        <span class="prov-sug-score">${Math.round(m.score*100)}%</span>
+      </div>`).join('');
+  sugEl.style.display = 'block';
+}
+
+function seleccionarSugerencia(event, inputId, sugId, nombre) {
+  event.preventDefault();
+  const inputEl = document.getElementById(inputId);
+  if (inputEl) {
+    inputEl.value = nombre;
+    inputEl.dispatchEvent(new Event('change'));
+    // Also update hGastos if it's a historial input
+    const m = inputId.match(/^hprov-(\d+)$/);
+    if (m) window.hGastos[parseInt(m[1])].proveedor = nombre;
+  }
+  hideSug(sugId);
+}
+
+function hideSug(sugId) {
+  const el = document.getElementById(sugId);
+  if (el) el.style.display = 'none';
+}
+
+// ---- DETECTAR DUPLICADOS ----
+
+function detectarDuplicados() {
+  const provs = window.proveedoresList || [];
+  const THRESHOLD = 0.60;
+  const grupos = [];
+  const usados = new Set();
+
+  for (let i = 0; i < provs.length; i++) {
+    if (usados.has(i)) continue;
+    const grupo = [provs[i]];
+    for (let j = i+1; j < provs.length; j++) {
+      if (usados.has(j)) continue;
+      if (tokenSimilarity(provs[i], provs[j]) >= THRESHOLD) {
+        grupo.push(provs[j]);
+        usados.add(j);
+      }
+    }
+    if (grupo.length > 1) {
+      usados.add(i);
+      grupos.push(grupo);
+    }
+  }
+
+  const container = document.getElementById('mergeGroups');
+  if (!grupos.length) {
+    container.innerHTML = '<div style="font-size:12px;color:var(--green);padding:8px 0;margin-bottom:8px">✅ No se detectaron proveedores duplicados</div>';
+    container.style.display = 'block';
+    setTimeout(() => { container.style.display='none'; container.innerHTML=''; }, 3000);
+    return;
+  }
+
+  container.innerHTML = `
+    <div style="font-size:11px;color:var(--muted);margin-bottom:10px">Se detectaron <strong style="color:var(--text)">${grupos.length}</strong> grupos de posibles duplicados. Hacé click en los nombres para seleccionarlos y unificarlos.</div>
+    ${grupos.map((grupo, gi) => `
+      <div class="merge-group" id="mgroup-${gi}">
+        <div class="merge-group-title">Grupo ${gi+1} — elegí el nombre canónico:</div>
+        <div class="merge-chips" id="mchips-${gi}">
+          ${grupo.map(p => `<span class="merge-chip" onclick="toggleMergeChip(${gi},'${p.replace(/'/g,"\\'")}',this)">${p}</span>`).join('')}
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <input id="mname-${gi}" placeholder="Nombre final..." value="${grupo[0]}" style="flex:1;min-width:150px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:5px 10px;color:var(--text);font-family:var(--mono);font-size:12px">
+          <button class="btn primary" onclick="ejecutarMerge(${gi})" style="font-size:11px;padding:5px 12px;white-space:nowrap">Unificar →</button>
+          <button class="btn" onclick="document.getElementById('mgroup-${gi}').remove()" style="font-size:11px;padding:5px 10px">Ignorar</button>
+        </div>
+      </div>`).join('')}`;
+  container.style.display = 'block';
+}
+
+// Track which chips are selected per group
+window._mergeSelections = {};
+
+function toggleMergeChip(gi, nombre, el) {
+  if (!window._mergeSelections[gi]) window._mergeSelections[gi] = new Set();
+  if (window._mergeSelections[gi].has(nombre)) {
+    window._mergeSelections[gi].delete(nombre);
+    el.classList.remove('selected');
+  } else {
+    window._mergeSelections[gi].add(nombre);
+    el.classList.add('selected');
+    // Auto-fill the name input with clicked chip
+    document.getElementById(`mname-${gi}`).value = nombre;
+  }
+}
+
+async function ejecutarMerge(gi) {
+  const group = document.getElementById(`mgroup-${gi}`);
+  const nombreFinal = document.getElementById(`mname-${gi}`).value.trim();
+  if (!nombreFinal) { alert('Escribí el nombre final antes de unificar.'); return; }
+
+  // Get all names in this group from the chips
+  const chips = group.querySelectorAll('.merge-chip');
+  const nombresAReemplazar = [...chips].map(c => c.textContent).filter(n => n !== nombreFinal);
+
+  if (!nombresAReemplazar.length) {
+    group.remove();
+    return;
+  }
+
+  const btn = group.querySelector('.btn.primary');
+  btn.textContent = 'Actualizando...'; btn.disabled = true;
+
+  let actualizados = 0;
+  for (const viejo of nombresAReemplazar) {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/constructora_gastos?proveedor=eq.${encodeURIComponent(viejo)}`, {
+      method: 'PATCH',
+      headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ proveedor: nombreFinal })
+    });
+    if (r.ok) {
+      // Update local data
+      allGastos.forEach(g => { if (g.proveedor === viejo) g.proveedor = nombreFinal; });
+      actualizados++;
+    }
+  }
+
+  // Refresh providers list
+  await cargarConfig();
+  group.innerHTML = `<div style="font-size:12px;color:var(--green);padding:4px 0">✅ Unificados ${nombresAReemplazar.length} nombres → "${nombreFinal}" (${actualizados} grupos actualizados)</div>`;
+  setTimeout(() => group.remove(), 2500);
 }
 
 // ---- INIT ----
