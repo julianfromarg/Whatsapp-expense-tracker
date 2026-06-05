@@ -622,7 +622,11 @@ async function fetchGastos() {
 }
 
 async function cargarTodo() {
-  [allGastos, allPresupuestos] = await Promise.all([fetchGastos(), fetchPresupuestos()]);
+  [allGastos, allPresupuestos, window.proveedoresList] = await Promise.all([
+    fetchGastos(),
+    fetchPresupuestos(),
+    fetchProveedores()
+  ]);
   filtrados = [...allGastos];
   renderDashboardTabs();
   renderDashboard();
@@ -937,6 +941,17 @@ async function guardarGasto() {
     limpiarForm();
     allGastos = await fetchGastos();
     filtrados = [...allGastos];
+    // Auto-register new proveedor if not already in list
+    const prov = gasto.proveedor;
+    if (prov && !window.proveedoresList.includes(prov)) {
+      await fetch(`${SUPABASE_URL}/rest/v1/constructora_proveedores`, {
+        method: 'POST',
+        headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'resolution=ignore-duplicates,return=minimal' },
+        body: JSON.stringify({ nombre: prov })
+      });
+      window.proveedoresList.push(prov);
+      window.proveedoresList.sort();
+    }
   } else {
     document.getElementById('errorMsg').textContent = '❌ Error al guardar. Intentá de nuevo.';
     document.getElementById('errorMsg').style.display = 'block';
@@ -1117,10 +1132,16 @@ function fmtFecha(f) {
 // ---- CONFIG / METADATA ----
 window.proveedoresList = [];
 
+async function fetchProveedores() {
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/constructora_proveedores?select=nombre&order=nombre.asc`, {
+    headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+  });
+  const data = await r.json();
+  return data.map(p => p.nombre);
+}
+
 async function cargarConfig() {
-  // Get unique proveedores from gastos
-  const provSet = new Set(allGastos.map(g => g.proveedor).filter(Boolean));
-  window.proveedoresList = [...provSet].sort();
+  window.proveedoresList = await fetchProveedores();
   renderConfig();
 }
 
@@ -1156,21 +1177,35 @@ function renderConfig() {
   }).join('');
 }
 
-function agregarProveedor() {
+async function agregarProveedor() {
   const nombre = prompt('Nombre del nuevo proveedor:');
   if (!nombre || !nombre.trim()) return;
   const n = nombre.trim();
-  if (!window.proveedoresList.includes(n)) {
+  if (window.proveedoresList.includes(n)) { alert('Ese proveedor ya existe.'); return; }
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/constructora_proveedores`, {
+    method: 'POST',
+    headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+    body: JSON.stringify({ nombre: n })
+  });
+  if (r.ok) {
     window.proveedoresList.push(n);
     window.proveedoresList.sort();
     renderConfig();
+  } else {
+    alert('Error al guardar el proveedor.');
   }
 }
 
-function eliminarProveedor(nombre) {
-  if (!confirm(`¿Eliminar "${nombre}" de la lista de proveedores?`)) return;
-  window.proveedoresList = window.proveedoresList.filter(p => p !== nombre);
-  renderConfig();
+async function eliminarProveedor(nombre) {
+  if (!confirm(`¿Eliminar "${nombre}" de la lista de proveedores?\nLos gastos que lo tengan asignado no se modifican.`)) return;
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/constructora_proveedores?nombre=eq.${encodeURIComponent(nombre)}`, {
+    method: 'DELETE',
+    headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+  });
+  if (r.ok) {
+    window.proveedoresList = window.proveedoresList.filter(p => p !== nombre);
+    renderConfig();
+  }
 }
 
 async function eliminarGasto(id) {
@@ -1954,11 +1989,21 @@ async function ejecutarMerge(gi) {
       body: JSON.stringify({ proveedor: nombreFinal })
     });
     if (r.ok) {
-      // Update local data
       allGastos.forEach(g => { if (g.proveedor === viejo) g.proveedor = nombreFinal; });
+      // Remove old name from proveedores table
+      await fetch(`${SUPABASE_URL}/rest/v1/constructora_proveedores?nombre=eq.${encodeURIComponent(viejo)}`, {
+        method: 'DELETE',
+        headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+      });
       actualizados++;
     }
   }
+  // Ensure final name exists in proveedores table
+  await fetch(`${SUPABASE_URL}/rest/v1/constructora_proveedores`, {
+    method: 'POST',
+    headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'resolution=ignore-duplicates,return=minimal' },
+    body: JSON.stringify({ nombre: nombreFinal })
+  });
 
   // Refresh providers list
   await cargarConfig();
