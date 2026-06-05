@@ -283,12 +283,13 @@
             <th onclick="sortBy('categoria')">Categoría <span class="sort-arrow">↕</span></th>
             <th onclick="sortBy('proveedor')">Proveedor <span class="sort-arrow">↕</span></th>
             <th onclick="sortBy('pagado_por')">Pagado por <span class="sort-arrow">↕</span></th>
+            <th>Presupuesto</th>
             <th onclick="sortBy('monto')" style="text-align:right">Monto ARS <span class="sort-arrow">↕</span></th>
             <th style="text-align:right">USD</th>
           </tr>
         </thead>
         <tbody id="tablaBody">
-          <tr><td colspan="8" class="loading"><div class="spinner"></div></td></tr>
+          <tr><td colspan="9" class="loading"><div class="spinner"></div></td></tr>
         </tbody>
       </table>
     </div>
@@ -589,7 +590,7 @@ async function fetchGastos() {
 }
 
 async function cargarTodo() {
-  allGastos = await fetchGastos();
+  [allGastos, allPresupuestos] = await Promise.all([fetchGastos(), fetchPresupuestos()]);
   filtrados = [...allGastos];
   renderDashboardTabs();
   renderDashboard();
@@ -794,6 +795,13 @@ function renderTabla() {
           </select>
         </td>
         <td style="color:var(--muted);font-size:12px">${g.pagado_por || '—'}</td>
+        <td onclick="event.stopPropagation()">
+          <select onchange="actualizarPresupuesto('${g.id}',this.value)"
+            style="background:var(--bg3);border:1px solid ${g.presupuesto_id ? 'rgba(200,181,96,0.4)' : 'var(--border)'};border-radius:4px;color:${g.presupuesto_id ? 'var(--accent)' : 'var(--muted)'};font-family:var(--mono);font-size:11px;padding:3px 6px;width:100%;cursor:pointer;max-width:160px">
+            <option value="">— Sin asignar —</option>
+            ${(allPresupuestos||[]).map(p=>`<option value="${p.id}" ${p.id===g.presupuesto_id?'selected':''}>${p.nombre.length>28?p.nombre.substring(0,26)+'…':p.nombre}</option>`).join('')}
+          </select>
+        </td>
         <td style="text-align:right;white-space:nowrap" onclick="event.stopPropagation()">
           <span style="color:var(--muted);font-size:11px;margin-right:2px">${g.moneda === 'USD' ? 'USD' : '$'}</span><input type="number" value="${parseFloat(g.monto||0)}" onchange="actualizarCampo('${g.id}','monto',parseFloat(this.value))" style="background:transparent;border:none;border-bottom:1px dashed transparent;color:var(--accent);font-family:var(--mono);font-size:13px;font-weight:500;width:110px;text-align:right;padding:2px 0" onmouseover="this.style.borderBottomColor='var(--border)'" onmouseout="this.style.borderBottomColor='transparent'">
         </td>
@@ -804,11 +812,11 @@ function renderTabla() {
       </tr>`;
     }),
     `<tr style="background:rgba(200,181,96,0.04)">
-      <td colspan="6" style="color:var(--muted);font-size:11px">Total filtrado</td>
+      <td colspan="7" style="color:var(--muted);font-size:11px">Total filtrado</td>
       <td class="monto-cell" style="text-align:right">$${Math.round(totalFilt).toLocaleString('es-AR')}</td>
       <td class="usd-cell" style="text-align:right">USD ${Math.round(totalFilt/tc).toLocaleString('es-AR')}</td>
     </tr>`
-  ].join('') : '<tr><td colspan="8" style="text-align:center;padding:32px;color:var(--muted)">Sin resultados</td></tr>';
+  ].join('') : '<tr><td colspan="9" style="text-align:center;padding:32px;color:var(--muted)">Sin resultados</td></tr>';
 
   // Paginación
   const totalPages = Math.ceil(filtrados.length / PER_PAGE);
@@ -1270,6 +1278,18 @@ async function actualizarCampo(id, campo, valor) {
   });
   const g = allGastos.find(x => x.id === id);
   if (g) g[campo] = valor;
+}
+
+async function actualizarPresupuesto(id, presupuestoId) {
+  const val = presupuestoId || null;
+  await fetch(`${SUPABASE_URL}/rest/v1/constructora_gastos?id=eq.${id}`, {
+    method: 'PATCH',
+    headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+    body: JSON.stringify({ presupuesto_id: val })
+  });
+  const g = allGastos.find(x => x.id === id);
+  if (g) g.presupuesto_id = val;
+  if (document.getElementById('page-presupuestos').classList.contains('active')) renderPresupuestos();
 }
 
 // ---- PRESUPUESTOS ----
