@@ -1,4 +1,4 @@
-# Chomicki Constructora — Context Document v6
+# Chomicki Constructora — Context Document v8
 
 ## Resumen del proyecto
 
@@ -142,7 +142,7 @@ Materiales, Mano de obra, Honorarios, Servicios, Transporte, Impuestos/Tasas, Ad
 ## GitHub Pages — Dashboard principal
 - **Repo:** `https://github.com/julianfromarg/Whatsapp-expense-tracker`
 - **URL:** `https://julianfromarg.github.io/Whatsapp-expense-tracker/chomicki-gastos.html`
-- **Archivo:** `chomicki-gastos.html` — archivo único (~1900 líneas), todo en un solo HTML (CSS + HTML + JS)
+- **Archivo:** `chomicki-gastos.html` — archivo único (~2400 líneas), todo en un solo HTML (CSS + HTML + JS)
 - **⚠️ La SUPABASE_KEY está hardcodeada en el HTML** — al subir un archivo nuevo verificar que la legacy anon key esté correcta
 
 ---
@@ -156,6 +156,18 @@ Materiales, Mano de obra, Honorarios, Servicios, Transporte, Impuestos/Tasas, Ad
   - Click en barra de centro → activa ese tab
 - **Métricas:** total invertido (ARS + equivalente USD), cantidad de gastos, promedio por gasto, último registro
 - **Tipo de cambio blue** en tiempo real (API primaria: **dolarapi.com** `GET /v1/dolares/blue`, fallback: bluelytics.com.ar) — usado para conversiones en todo el dashboard. Bluelytics bloqueaba CORS desde GitHub Pages, por eso se migró a dolarapi.com.
+- **Tabla Budget vs Actual (BVA)** — aparece en todos los tabs del dashboard (resumen y cada centro), debajo de los presupuestos del centro y arriba de los últimos gastos. Función: `renderBvaTable()`, div: `#dashBvaTable`.
+  - **Columnas (izquierda a derecha):** Centro/Categoría · Presup. Ejecutado · Por Ejecutar · Presup. Total · No Presup. · **Total**
+  - **Definiciones:**
+    - *Presup. Ejecutado:* suma de gastos con `presupuesto_id` asignado (normalizados a ARS via `gastoEnARS`)
+    - *Por Ejecutar:* `max(0, Presup. Total - Presup. Ejecutado)` — saldo futuro, columna informativa, **no suma al Total**
+    - *Presup. Total:* suma de `monto_total` de los presupuestos del centro (via `presupuestoEnARS`)
+    - *No Presup.:* suma de gastos sin `presupuesto_id`
+    - *Total:* `Presup. Total + No Presup.` en filas de centro/TOTAL · `Presup. Ejecutado + No Presup.` en filas de categoría
+  - **Vista Resumen:** una fila por centro de costo (solo los que tienen datos) + fila TOTAL global. Sin desglose de categorías.
+  - **Vista centro específico:** una fila por categoría (solo con gastos) + fila TOTAL del centro. Las filas de categoría muestran `—` en Presup. Total y Por Ejecutar porque el presupuesto está asignado al centro, no a la categoría.
+  - **Formato montos:** millones con 2 decimales (`$38,45M`). Cero → `—` en gris.
+  - **Colores de columnas:** Presup. Total en dorado (accent) · Presup. Ejecutado en blanco · Por Ejecutar en gris muted · No Presup. en azul (blue) · Total en blanco bold
 
 ### Tab: Gastos
 - Tabla completa con todos los gastos, paginación (20 por página)
@@ -268,6 +280,50 @@ Implementado 100% en el browser, sin APIs externas. Algoritmo: **Levenshtein dis
 - Reemplazado por Supabase. El Sheet existe pero está desactualizado.
 
 ---
+
+
+---
+
+## Sistema de diseño — "Mercury" (nuevo en v8)
+
+En v8 se rediseñó toda la UI siguiendo `Mercury_Design_Guidelines.md` (estética neobanco: light-mode default, azul institucional, grises neutros, tablas limpias, confianza silenciosa). **Decisión de implementación clave:** se mantuvieron todos los nombres de clase CSS existentes y se reescribió solo el sistema de tokens + componentes, de modo que las ~2.000 líneas de JS que generan HTML no se tocaron.
+
+### Tokens (HSL) — en `:root`
+Tokens semánticos como canales HSL (se usan vía `hsl(var(--token))`):
+`--background, --foreground, --card, --surface, --muted-bg, --muted-fg, --border-c, --border-strong, --primary, --primary-hover, --gain, --loss, --warn-c, --accent-data, --shadow-card, --shadow-modal`.
+
+**Aliases legacy:** los nombres viejos (`--bg, --bg2, --bg3, --border, --border2, --text, --muted, --accent, --accent2, --green, --red, --blue, --warn, --mono, --serif, --mono-num`) ahora **apuntan a los tokens Mercury** vía `var()`. Esto hace que todos los estilos inline del JS resuelvan automáticamente y sean theme-aware. **No eliminar los aliases** o se rompen los estilos inline.
+
+### Dark mode
+- Toggle (ícono sol/luna Lucide) en el nav → `toggleTheme()`, persiste en `localStorage` (`mercury-theme`).
+- Script en `<head>` setea `data-theme` antes del primer paint (sin flash). Respeta `prefers-color-scheme` en la primera carga.
+- Los tokens dark viven en `[data-theme="dark"]`. Como los aliases referencian los tokens semánticos, el dark mode se propaga solo.
+
+### Tipografía
+- **Inter** (Google Fonts, pesos 300–700). `font-feature-settings: 'cv02','cv03','cv04','cv11'` + `font-variant-numeric: tabular-nums` en números.
+- `--mono-num` = stack Inter con cifras tabulares (reemplazó a IBM Plex Mono en todos los montos).
+
+### Regla aplicada en todo el dashboard
+**Nunca colorear valores absolutos** — solo deltas/estados. Todos los montos (KPIs, tabla, BVA, Ejecutado, monto hero de modales, gastos asignados) son `--foreground`. El color queda reservado para: saldo verde/rojo, barras de presupuesto (verde/ámbar/rojo según % ejecutado), % ejecutado, y la tabla BVA es monocromática (jerarquía por peso, no por color).
+
+### Iconos
+- Emojis a color reemplazados por **SVGs Lucide inline** (line icons, `stroke="currentColor"`, 14px en botones / 18px en archivos): papelera, clip, lápiz, ojo, lupa, mensaje, cerrar (X), e iconos por tipo de archivo en `archivoIcono()`.
+- Emojis decorativos de mensajes/labels (✅❌⚠️🤖💻📋) **eliminados** — el estado se comunica por color/borde.
+- Símbolos monocromáticos que se conservan (encajan en Mercury): flechas de sort `↕`, paginación `← →`, links `↗`, checks de texto.
+- **Sin iconos en los tabs de navegación** (Mercury). Se quitaron `⚙` y `+` de los tabs.
+
+### Componentes clave
+- **Nav** sticky con `backdrop-blur`; **tabs en píldora** (contenedor `--muted-bg`, tab activo = card + sombra).
+- **Cards/KPI:** borde + sombra sutil, sin bordes de color arriba. KPI: número 30px/700 tabular.
+- **Tablas:** sin zebra, headers 12px mayúscula `--muted-fg`, hover sutil, cifras tabulares.
+- **Botones:** `default` (card+borde), `primary` (azul), `btn-clear`/`btn-danger` (ghost; danger → rojo en hover).
+- **Modales:** overlay `rgba(0,0,0,0.55)`, caja con `--shadow-modal` (regla `[id^="modal"] > div`).
+- **Skeletons** (no spinner) en la carga inicial de los KPIs (`.skel`, `.skel-metrics`, animación `skelPulse`).
+- Scrollbar custom, `scroll-behavior:smooth`, animación `pageIn` al cambiar de tab, `prefers-reduced-motion` respetado.
+
+### Pendientes de diseño (menores, no bloqueantes)
+- Spinners en cargas secundarias (historial, presupuestos, tabla) siguen siendo spinner; podrían pasar a skeleton.
+- Toasts: las guidelines sugieren toasts bottom-right con auto-dismiss; hoy se usan los bloques `.success-msg`/`.error-msg` inline.
 
 ## Pendientes
 
