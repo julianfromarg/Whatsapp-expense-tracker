@@ -1,4 +1,4 @@
-# Chomicki Constructora — Context Document v8
+# Chomicki Constructora — Context Document v9
 
 ## Resumen del proyecto
 
@@ -73,6 +73,19 @@ created_at timestamptz DEFAULT now()
 - **Fuente de verdad** para la lista de proveedores. Independiente de los gastos — un proveedor persiste aunque no tenga gastos asignados.
 - Poblada inicialmente con `INSERT ... SELECT DISTINCT proveedor FROM constructora_gastos`
 
+### `constructora_bot_sessions` — nueva en v9
+```sql
+phone text PRIMARY KEY
+estado text NOT NULL   -- 'esperando_texto' | 'esperando_comprobante' | 'esperando_imagen'
+media_id text          -- image media_id de Meta, si llegó primero
+gasto_id uuid          -- FK a constructora_gastos, para poder hacer UPDATE con imagen tardía
+texto text             -- mensaje de texto, si llegó primero
+updated_at timestamptz DEFAULT now()
+```
+- **RLS:** `CREATE POLICY "service_all" ON constructora_bot_sessions USING (true) WITH CHECK (true)`
+- Usada por el bot para correlacionar mensajes de texto e imagen que llegan por separado o en paralelo
+- TTL: 2 horas — el cron `bot-session-ttl` borra sesiones vencidas y notifica al usuario
+
 ### Enum `centro_costo_enum`
 - Infraestructura agua y cloacas
 - Infraestructura gas
@@ -95,6 +108,7 @@ Materiales, Mano de obra, Honorarios, Servicios, Transporte, Impuestos/Tasas, Ad
 - **Upsert:** `x-upsert: true` en todos los uploads
 - **Formato historial:** `historial-{nombre_original}.{ext}`
 - **Formato webapp:** `{timestamp}.{ext}`
+- **Formato bot:** `bot-{timestamp}.{ext}`
 
 ### Bucket `constructora-presupuestos`
 - **Tipo:** Public
@@ -120,10 +134,55 @@ Materiales, Mano de obra, Honorarios, Servicios, Transporte, Impuestos/Tasas, Ad
   - `CONSTRUCTORA_DB_URL` — `https://vccnehyvpextfodtvvxg.supabase.co`
   - `CONSTRUCTORA_DB_KEY` — Secret key de Supabase
 - **Modelo Claude:** `claude-sonnet-4-5` (no cambiar — puede no estar disponible con otro nombre en esta cuenta)
-- **Tres modos de operación:**
+- **Cuatro modos de operación:**
   1. **GET** → verificación webhook Meta (hub.challenge)
-  2. **POST whatsapp_business_account** → recibe mensaje WhatsApp, extrae gasto con IA, inserta en Supabase, responde confirmación. Guarda `mensaje_original`
-  3. **POST webapp proxy** → recibe `{messages, system, _mode}`. Si `_mode === 'historial'` devuelve JSON sin insertar. Si no, inserta el gasto extraído.
+  2. **POST `_mode: "cron"`** → invocado por pg_cron cada 15 min; busca sesiones vencidas, notifica al usuario y las borra
+  3. **POST `whatsapp_business_account`** → recibe mensaje WhatsApp, maneja sesiones texto/imagen, extrae gasto con IA, inserta en Supabase, responde confirmación
+  4. **POST webapp proxy** → recibe `{messages, system, _mode}`. Si `_mode === 'historial'` devuelve JSON sin insertar. Si no, inserta el gasto extraído.
+
+### Lógica de sesiones del bot (v9)
+
+El bot maneja tres tipos de mensaje entrante y tres estados de sesión. El problema de fondo es que WhatsApp puede entregar mensajes enviados casi simultáneamente en cualquier orden, y la Edge Function es stateless. La solución es un delay de 2.5s antes de consultar la sesión tanto en texto como en imagen sin caption, para que el que llegó primero ya haya escrito su sesión.
+
+**Estados de sesión:**
+- `esperando_texto` — llegó imagen sin caption, esperando el detalle del gasto
+- `esperando_comprobante` — gasto registrado, se preguntó al usuario si tiene comprobante
+- `esperando_imagen` — usuario respondió "sí" al comprobante, esperando la foto
+
+**Flujos:**
+
+| Entrada | Sesión previa | Acción |
+|---|---|---|
+| Imagen con caption | cualquiera | Procesar directo, borrar sesión, confirmar |
+| Imagen sin caption | `esperando_texto` con `texto` | Procesar texto+imagen, borrar sesión, confirmar |
+| Imagen sin caption | `esperando_imagen` con `gasto_id` | Subir imagen, PATCH gasto, borrar sesión, confirmar |
+| Imagen sin caption | ninguna | Guardar `media_id`, estado `esperando_texto`, pedir detalle |
+| Texto | `esperando_comprobante` + "sí" | Cambiar estado a `esperando_imagen`, pedir foto |
+| Texto | `esperando_comprobante` + "no" | Borrar sesión, confirmar sin comprobante |
+| Texto | `esperando_texto` con `media_id` | Procesar texto+imagen, borrar sesión, confirmar |
+| Texto | ninguna | Registrar gasto, guardar `gasto_id`, estado `esperando_comprobante`, preguntar por comprobante |
+
+**Delay anti-race-condition:** tanto el bloque de imagen sin caption como el de texto esperan 2500ms antes de hacer `getSession()`, para absorber el caso de mensajes enviados simultáneamente.
+
+**TTL:** sesiones con `updated_at` > 2 horas son borradas por el cron con mensaje de aviso al usuario.
+
+---
+
+## pg_cron — job `bot-session-ttl`
+
+- **Extensiones habilitadas:** `pg_cron`, `pg_net`
+- **Frecuencia:** cada 15 minutos (`*/15 * * * *`)
+- **Job ID:** 2
+- **Comando:**
+```sql
+SELECT net.http_post(
+  url := 'https://vccnehyvpextfodtvvxg.supabase.co/functions/v1/quick-processor',
+  headers := '{"Content-Type":"application/json"}'::jsonb,
+  body := '{"_mode":"cron"}'::jsonb
+);
+```
+- Verificar con: `SELECT jobid, jobname, schedule, command FROM cron.job;`
+- Log de ejecuciones: `SELECT * FROM cron.job_run_details ORDER BY start_time DESC LIMIT 10;`
 
 ---
 
@@ -203,7 +262,7 @@ Materiales, Mano de obra, Honorarios, Servicios, Transporte, Impuestos/Tasas, Ad
 - Counter de progreso y resultado final
 - **Anti-duplicados:** constraint `unique_comprobante` + `Prefer: resolution=ignore-duplicates`
 
-### Tab: Presupuestos *(nuevo)*
+### Tab: Presupuestos
 - Lista de presupuestos con barra de progreso, % ejecutado, presupuestado/ejecutado/saldo
 - **Manejo de monedas:** todo se normaliza a ARS usando `tc` (tipo de cambio blue) para calcular % y barra. Los montos se muestran en la moneda del presupuesto (ARS o USD).
 - Stats globales arriba: cantidad, total en ARS, % ejecutado general
@@ -221,7 +280,7 @@ Materiales, Mano de obra, Honorarios, Servicios, Transporte, Impuestos/Tasas, Ad
 - **"+ Nuevo presupuesto":** modal con nombre, monto, moneda, centro de costo, proveedor, descripción
 - **Asignación desde tab Gastos:** columna "Presupuesto" en la tabla permite asignar/cambiar directamente
 
-### Tab: ⚙ Config
+### Tab: Config
 - **Proveedores:** lista desde `constructora_proveedores` (persiste independientemente de los gastos)
   - Botón **🔍 Duplicados** → detección automática por fuzzy matching (umbral 60%)
     - Muestra grupos de posibles duplicados con chips seleccionables
@@ -281,10 +340,7 @@ Implementado 100% en el browser, sin APIs externas. Algoritmo: **Levenshtein dis
 
 ---
 
-
----
-
-## Sistema de diseño — "Mercury" (nuevo en v8)
+## Sistema de diseño — "Mercury" (v8, sin cambios en v9)
 
 En v8 se rediseñó toda la UI siguiendo `Mercury_Design_Guidelines.md` (estética neobanco: light-mode default, azul institucional, grises neutros, tablas limpias, confianza silenciosa). **Decisión de implementación clave:** se mantuvieron todos los nombres de clase CSS existentes y se reescribió solo el sistema de tokens + componentes, de modo que las ~2.000 líneas de JS que generan HTML no se tocaron.
 
@@ -325,6 +381,8 @@ Tokens semánticos como canales HSL (se usan vía `hsl(var(--token))`):
 - Spinners en cargas secundarias (historial, presupuestos, tabla) siguen siendo spinner; podrían pasar a skeleton.
 - Toasts: las guidelines sugieren toasts bottom-right con auto-dismiss; hoy se usan los bloques `.success-msg`/`.error-msg` inline.
 
+---
+
 ## Pendientes
 
 ### Bloqueado
@@ -332,11 +390,11 @@ Tokens semánticos como canales HSL (se usan vía `hsl(var(--token))`):
 
 ### Ideas conversadas, no implementadas
 - **Bot en grupo de WhatsApp** — Meta API no soporta grupos nativamente. Alternativas: `!gasto` en mensajes individuales, o Baileys (WhatsApp Web unofficial API)
-- **Guardar comprobantes del bot** — cuando llega imagen por WhatsApp, descargarla de Meta API y subirla a Storage. Requiere modificar Edge Function para `msg.type === 'image'`
 - **Exportar gastos a Excel/CSV**
 - **Gráfico de evolución mensual** (línea de gastos en el tiempo)
 - **Agregar campo "proyecto"** para cuando haya más de un loteo
 - **Notificaciones por email** cuando se carga un gasto nuevo
+- **Voice note transcription** via Whisper
 
 ---
 
@@ -363,3 +421,9 @@ Tokens semánticos como canales HSL (se usan vía `hsl(var(--token))`):
 10. **Storage bucket presupuestos:** Las RLS policies del bucket `constructora-presupuestos` hay que crearlas manualmente desde el SQL Editor (no desde la UI de Storage), igual que se hizo con `constructora-comprobantes`.
 
 11. **Archivos en presupuestos:** Se organizan por carpeta `{presupuesto_id}/` dentro del bucket. Google Docs Viewer a veces tarda con archivos pesados — el botón "↗ Abrir" es el fallback confiable.
+
+12. **pg_cron / pg_net:** Ambas extensiones habilitadas en el proyecto `fin-ops`. `ALTER DATABASE ... SET app.edge_function_url` no está permitido desde el SQL Editor de Supabase — hardcodear la URL directamente en el comando del cron job.
+
+13. **Bot sessions — race condition:** WhatsApp puede entregar dos mensajes enviados casi simultáneamente en cualquier orden y en invocaciones paralelas de la Edge Function. El delay de 2500ms antes de `getSession()` en los bloques de texto e imagen sin caption absorbe la mayoría de los casos. La robustez del dato en el dashboard tiene prioridad sobre la perfección del mensaje de respuesta.
+
+14. **`insertarGasto` debe retornar el ID:** usar `Prefer: return=representation` y retornar `rows[0].id` para poder guardarlo en la sesión y hacer el PATCH posterior con la imagen.
