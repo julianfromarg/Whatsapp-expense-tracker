@@ -1,8 +1,10 @@
-# Chomicki Constructora — Context Document v9
+# Chomicki Constructora — Context Document v10
 
 ## Resumen del proyecto
 
 Sistema de registro y seguimiento de gastos para un proyecto de loteo y construcción en Cipolletti, Río Negro, Argentina. El proyecto se llama **"Estado de Israel 317"** (parcela en calle Estado de Israel 317). Los socios son **Fabián Chomicki** y **Julian Chomicki** (padre e hijo).
+
+> **Cambios v9 → v10:** refactor de robustez de la Edge Function del bot de WhatsApp. Se resolvió el doble mensaje (y un race condition latente que podía perder comprobantes) al recibir imagen + texto casi simultáneos (típico al reenviar desde otro chat). Cambios: **claims atómicos de sesión**, **nudge diferido**, **respuesta 200 inmediata + procesamiento en background (`EdgeRuntime.waitUntil`)**, e **idempotencia por `msg.id`**. Nueva columna `prompt_sent` en `constructora_bot_sessions` y nueva tabla `constructora_bot_processed`.
 
 ---
 
@@ -73,18 +75,31 @@ created_at timestamptz DEFAULT now()
 - **Fuente de verdad** para la lista de proveedores. Independiente de los gastos — un proveedor persiste aunque no tenga gastos asignados.
 - Poblada inicialmente con `INSERT ... SELECT DISTINCT proveedor FROM constructora_gastos`
 
-### `constructora_bot_sessions` — nueva en v9
+### `constructora_bot_sessions`
 ```sql
 phone text PRIMARY KEY
 estado text NOT NULL   -- 'esperando_texto' | 'esperando_comprobante' | 'esperando_imagen'
 media_id text          -- image media_id de Meta, si llegó primero
 gasto_id uuid          -- FK a constructora_gastos, para poder hacer UPDATE con imagen tardía
-texto text             -- mensaje de texto, si llegó primero
+texto text             -- ⚠️ VESTIGIAL en v10: ningún path lo escribe (ver nota abajo)
+prompt_sent boolean NOT NULL DEFAULT false   -- ⭐ NUEVO v10: guard del nudge diferido
 updated_at timestamptz DEFAULT now()
 ```
 - **RLS:** `CREATE POLICY "service_all" ON constructora_bot_sessions USING (true) WITH CHECK (true)`
 - Usada por el bot para correlacionar mensajes de texto e imagen que llegan por separado o en paralelo
 - TTL: 2 horas — el cron `bot-session-ttl` borra sesiones vencidas y notifica al usuario
+- **`prompt_sent` (v10):** controla el nudge diferido. Cuando una imagen sin caption se estaciona (`esperando_texto`), el background task espera `NUDGE_MS` y solo manda "mandame el detalle" si gana un claim atómico sobre `prompt_sent=false`. Si un texto consumió la sesión antes, el nudge no se manda.
+- **`texto` es vestigial:** se mantiene en el esquema por compatibilidad pero ningún flujo lo escribe. El caso "texto primero, imagen después" se maneja con un settle + re-claim en el handler de texto, no guardando el texto. No usar este campo sin re-evaluar la lógica.
+
+### `constructora_bot_processed` — ⭐ NUEVA en v10 (idempotencia)
+```sql
+msg_id text PRIMARY KEY
+created_at timestamptz NOT NULL DEFAULT now()
+```
+- **RLS:** `CREATE POLICY "service_all" ON constructora_bot_processed USING (true) WITH CHECK (true)`
+- Evita que un **reintento de Meta** del mismo webhook duplique el gasto. Al entrar un mensaje, la función inserta `msg.id` con `Prefer: resolution=ignore-duplicates, return=representation`: si devuelve fila → es nuevo (procesar); si vacío → duplicado (ignorar).
+- **Fail-open:** si la tabla no existe o falla la inserción, la función procesa igual (no bloquea). Por eso es "recomendada" pero no estrictamente bloqueante.
+- **Cleanup:** el cron `bot-session-ttl` borra registros con `created_at` > 24h.
 
 ### Enum `centro_costo_enum`
 - Infraestructura agua y cloacas
@@ -136,35 +151,63 @@ Materiales, Mano de obra, Honorarios, Servicios, Transporte, Impuestos/Tasas, Ad
 - **Modelo Claude:** `claude-sonnet-4-5` (no cambiar — puede no estar disponible con otro nombre en esta cuenta)
 - **Cuatro modos de operación:**
   1. **GET** → verificación webhook Meta (hub.challenge)
-  2. **POST `_mode: "cron"`** → invocado por pg_cron cada 15 min; busca sesiones vencidas, notifica al usuario y las borra
-  3. **POST `whatsapp_business_account`** → recibe mensaje WhatsApp, maneja sesiones texto/imagen, extrae gasto con IA, inserta en Supabase, responde confirmación
-  4. **POST webapp proxy** → recibe `{messages, system, _mode}`. Si `_mode === 'historial'` devuelve JSON sin insertar. Si no, inserta el gasto extraído.
+  2. **POST `_mode: "cron"`** → invocado por pg_cron cada 15 min; sesiones vencidas + cleanup de `constructora_bot_processed`
+  3. **POST `whatsapp_business_account`** → recibe mensaje WhatsApp. **Devuelve 200 inmediato y procesa en background.**
+  4. **POST webapp proxy** → recibe `{messages, system, _mode}`. Si `_mode === 'historial'` devuelve JSON sin insertar. Si no, inserta el gasto extraído. **Síncrono** (devuelve datos reales).
 
-### Lógica de sesiones del bot (v9)
+### Arquitectura de robustez del bot (v10)
 
-El bot maneja tres tipos de mensaje entrante y tres estados de sesión. El problema de fondo es que WhatsApp puede entregar mensajes enviados casi simultáneamente en cualquier orden, y la Edge Function es stateless. La solución es un delay de 2.5s antes de consultar la sesión tanto en texto como en imagen sin caption, para que el que llegó primero ya haya escrito su sesión.
+El problema de fondo: WhatsApp puede entregar mensajes enviados casi simultáneamente (típico al **reenviar** imagen + texto desde otro chat) **en cualquier orden** y en **invocaciones paralelas** de la Edge Function, que es stateless. La versión anterior usaba un delay fijo de 2.5s antes de `getSession()`, pero como ambas invocaciones esperaban lo mismo, despertaban juntas y producían:
+- **Doble mensaje** ("Imagen recibida, mandame el detalle" + "Gasto registrado"), o
+- **Pérdida de comprobante** (ambas leían `null`: el texto registraba un gasto sin imagen y pisaba la sesión).
+
+**Solución v10 — cuatro piezas:**
+
+1. **Respuesta 200 inmediata + procesamiento en `EdgeRuntime.waitUntil`.** El webhook responde a Meta al instante; todo el trabajo (incluida la espera del nudge) corre en background. Baja reintentos de Meta y evita que un error devuelva 5xx. Helper: `runInBackground()`. Fallback: si `EdgeRuntime` no existe (local), no se bloquea el 200.
+
+2. **Claims atómicos de sesión.** En vez de `getSession` + `borrarSession` en dos pasos, se usan operaciones condicionales con `Prefer: return=representation`. Postgres bloquea la fila: solo una invocación recibe la fila (gana), el resto ve vacío (no-op). Helpers:
+   - `claimSessionByEstado(phone, estado)` → `DELETE ?phone=eq.X&estado=eq.Y` con `return=representation`. Devuelve la fila si ganó.
+   - `claimNudge(phone, mediaId)` → `PATCH ?phone=eq.X&estado=eq.esperando_texto&media_id=eq.M&prompt_sent=eq.false` SET `prompt_sent=true`. Devuelve true si ganó el derecho a nudgear.
+   - `claimComprobanteAImagen(phone)` → `PATCH ?estado=eq.esperando_comprobante` SET `estado=esperando_imagen`. Transición atómica para el "sí".
+
+3. **Nudge diferido.** La imagen sin caption estaciona la sesión (`esperando_texto`) y **no responde**. El background task espera `NUDGE_MS` (8s) y recién ahí intenta `claimNudge`. Si un texto consumió la sesión antes → no hay nada → no se manda nudge. Elimina el doble mensaje en reenvíos.
+
+4. **Idempotencia por `msg.id`.** `marcarProcesado(msg.id)` inserta el id en `constructora_bot_processed` con `ignore-duplicates`. Si es duplicado, `handleWhatsApp` retorna sin procesar. Fail-open.
+
+**Constantes tuneables (top del archivo):**
+- `SETTLE_MS = 2500` — cuánto espera el handler de texto, si no encontró imagen estacionada, antes de reintentar el claim (cubre "texto primero, imagen un instante después").
+- `NUDGE_MS = 8000` — cuánto espera la imagen antes de mandar "mandame el detalle". Debe ser mayor que el gap de entrega de un reenvío y que el tiempo razonable de tipeo.
 
 **Estados de sesión:**
-- `esperando_texto` — llegó imagen sin caption, esperando el detalle del gasto
-- `esperando_comprobante` — gasto registrado, se preguntó al usuario si tiene comprobante
+- `esperando_texto` — llegó imagen sin caption (con `media_id`), esperando el detalle del gasto
+- `esperando_comprobante` — gasto registrado (con `gasto_id`), se preguntó al usuario si tiene comprobante
 - `esperando_imagen` — usuario respondió "sí" al comprobante, esperando la foto
 
-**Flujos:**
+**Flujos (v10):**
 
-| Entrada | Sesión previa | Acción |
+| Entrada | Sesión / contexto | Acción |
 |---|---|---|
-| Imagen con caption | cualquiera | Procesar directo, borrar sesión, confirmar |
-| Imagen sin caption | `esperando_texto` con `texto` | Procesar texto+imagen, borrar sesión, confirmar |
-| Imagen sin caption | `esperando_imagen` con `gasto_id` | Subir imagen, PATCH gasto, borrar sesión, confirmar |
-| Imagen sin caption | ninguna | Guardar `media_id`, estado `esperando_texto`, pedir detalle |
-| Texto | `esperando_comprobante` + "sí" | Cambiar estado a `esperando_imagen`, pedir foto |
-| Texto | `esperando_comprobante` + "no" | Borrar sesión, confirmar sin comprobante |
-| Texto | `esperando_texto` con `media_id` | Procesar texto+imagen, borrar sesión, confirmar |
-| Texto | ninguna | Registrar gasto, guardar `gasto_id`, estado `esperando_comprobante`, preguntar por comprobante |
+| Imagen con caption | cualquiera | `borrarSession` + procesar directo (insert con imagen) + confirmar |
+| Imagen sin caption | claim `esperando_imagen` gana | Subir imagen, PATCH gasto (`gasto_id`), confirmar "Comprobante guardado" |
+| Imagen sin caption | sin claim | Estacionar `esperando_texto`+`media_id`, esperar `NUDGE_MS`, `claimNudge`; si gana → "mandame el detalle" |
+| Texto | `esperando_comprobante` + "sí" | `claimComprobanteAImagen`; si gana → "mandame la foto" |
+| Texto | `esperando_comprobante` + "no" | claim `esperando_comprobante`; si gana → "guardado sin comprobante" |
+| Texto | claim `esperando_texto` gana (tiene `media_id`) | Procesar texto+imagen (insert con imagen), confirmar |
+| Texto | sin claim → settle `SETTLE_MS` → re-claim gana | Procesar texto+imagen, confirmar |
+| Texto | sin claim tras settle | Registrar gasto, guardar `gasto_id`, `esperando_comprobante`, preguntar por comprobante |
 
-**Delay anti-race-condition:** tanto el bloque de imagen sin caption como el de texto esperan 2500ms antes de hacer `getSession()`, para absorber el caso de mensajes enviados simultáneamente.
+**Cómo se resuelve cada orden de reenvío:**
+- *Imagen primero, texto después:* imagen estaciona y espera; texto gana el claim de `esperando_texto`, procesa ambos, confirma una vez; el nudge a los 8s no encuentra sesión → no-op. **Un mensaje.**
+- *Texto primero, imagen después:* texto no encuentra nada, espera `SETTLE_MS`, reintenta; para entonces la imagen ya estacionó → claim gana, procesa ambos. **Un mensaje.**
+- *Carrera exacta:* el claim atómico garantiza un solo ganador; sin gasto-sin-comprobante.
 
-**TTL:** sesiones con `updated_at` > 2 horas son borradas por el cron con mensaje de aviso al usuario.
+**Tradeoff conocido:** si alguien manda una imagen sola y **tarda > `NUDGE_MS` (8s)** en escribir el detalle, verá el nudge y después la confirmación (dos mensajes). Solo aplica cuando hay una pausa real. Subir `NUDGE_MS` a 12000 da más margen de tipeo; bajarlo a 5000 hace que el nudge salga más rápido.
+
+**Helpers de procesamiento compartidos:**
+- `gastoBase(exp, extra)` — arma el objeto de insert con defaults (`fuente: "whatsapp-bot"`).
+- `registrarConImagen(phone, texto, mediaId)` — extrae IA + descarga + sube imagen + insert con comprobante + confirma una vez. Usado por todos los caminos que combinan texto e imagen.
+
+> **Estado de deploy:** el refactor v10 fue impactado y **probado OK** por Julian (los cuatro caminos: reenvío imagen+texto, imagen sola, texto solo, texto + "sí" + foto). Funcionó bien.
 
 ---
 
@@ -181,6 +224,7 @@ SELECT net.http_post(
   body := '{"_mode":"cron"}'::jsonb
 );
 ```
+- En `_mode: "cron"`, la función: (1) notifica y borra sesiones vencidas (TTL 2h), (2) borra `constructora_bot_processed` con > 24h.
 - Verificar con: `SELECT jobid, jobname, schedule, command FROM cron.job;`
 - Log de ejecuciones: `SELECT * FROM cron.job_run_details ORDER BY start_time DESC LIMIT 10;`
 
@@ -340,7 +384,7 @@ Implementado 100% en el browser, sin APIs externas. Algoritmo: **Levenshtein dis
 
 ---
 
-## Sistema de diseño — "Mercury" (v8, sin cambios en v9)
+## Sistema de diseño — "Mercury" (v8, sin cambios en v9/v10)
 
 En v8 se rediseñó toda la UI siguiendo `Mercury_Design_Guidelines.md` (estética neobanco: light-mode default, azul institucional, grises neutros, tablas limpias, confianza silenciosa). **Decisión de implementación clave:** se mantuvieron todos los nombres de clase CSS existentes y se reescribió solo el sistema de tokens + componentes, de modo que las ~2.000 líneas de JS que generan HTML no se tocaron.
 
@@ -364,7 +408,8 @@ Tokens semánticos como canales HSL (se usan vía `hsl(var(--token))`):
 
 ### Iconos
 - Emojis a color reemplazados por **SVGs Lucide inline** (line icons, `stroke="currentColor"`, 14px en botones / 18px en archivos): papelera, clip, lápiz, ojo, lupa, mensaje, cerrar (X), e iconos por tipo de archivo en `archivoIcono()`.
-- Emojis decorativos de mensajes/labels (✅❌⚠️🤖💻📋) **eliminados** — el estado se comunica por color/borde.
+- Emojis decorativos de mensajes/labels (✅❌⚠️🤖💻📋) **eliminados** del dashboard — el estado se comunica por color/borde.
+- **Nota:** los mensajes salientes del bot de WhatsApp sí usan emojis (✅ 📎 ⏱), porque van a la interfaz de WhatsApp, no al dashboard. La regla Mercury aplica solo a la UI del dashboard.
 - Símbolos monocromáticos que se conservan (encajan en Mercury): flechas de sort `↕`, paginación `← →`, links `↗`, checks de texto.
 - **Sin iconos en los tabs de navegación** (Mercury). Se quitaron `⚙` y `+` de los tabs.
 
@@ -395,6 +440,7 @@ Tokens semánticos como canales HSL (se usan vía `hsl(var(--token))`):
 - **Agregar campo "proyecto"** para cuando haya más de un loteo
 - **Notificaciones por email** cuando se carga un gasto nuevo
 - **Voice note transcription** via Whisper
+- **Auto-registro de proveedor desde el bot** — hoy el alta automática en `constructora_proveedores` solo ocurre desde la webapp ("+ Cargar"); el bot inserta el gasto con `proveedor` pero no da de alta el proveedor en la tabla. Posible mejora futura.
 
 ---
 
@@ -416,7 +462,7 @@ Tokens semánticos como canales HSL (se usan vía `hsl(var(--token))`):
 
 8. **Modelo Claude:** En la Edge Function se usa `claude-sonnet-4-5`. No cambiar — puede no estar disponible con otro string en esta cuenta.
 
-9. **Proveedores:** La fuente de verdad es `constructora_proveedores`, no los gastos. Al hacer merge de duplicados, se actualiza la tabla de gastos Y se borra el nombre viejo de `constructora_proveedores`. Al guardar un gasto nuevo con proveedor desconocido, se registra automáticamente.
+9. **Proveedores:** La fuente de verdad es `constructora_proveedores`, no los gastos. Al hacer merge de duplicados, se actualiza la tabla de gastos Y se borra el nombre viejo de `constructora_proveedores`. Al guardar un gasto nuevo con proveedor desconocido desde la webapp, se registra automáticamente (el bot todavía no).
 
 10. **Storage bucket presupuestos:** Las RLS policies del bucket `constructora-presupuestos` hay que crearlas manualmente desde el SQL Editor (no desde la UI de Storage), igual que se hizo con `constructora-comprobantes`.
 
@@ -424,6 +470,32 @@ Tokens semánticos como canales HSL (se usan vía `hsl(var(--token))`):
 
 12. **pg_cron / pg_net:** Ambas extensiones habilitadas en el proyecto `fin-ops`. `ALTER DATABASE ... SET app.edge_function_url` no está permitido desde el SQL Editor de Supabase — hardcodear la URL directamente en el comando del cron job.
 
-13. **Bot sessions — race condition:** WhatsApp puede entregar dos mensajes enviados casi simultáneamente en cualquier orden y en invocaciones paralelas de la Edge Function. El delay de 2500ms antes de `getSession()` en los bloques de texto e imagen sin caption absorbe la mayoría de los casos. La robustez del dato en el dashboard tiene prioridad sobre la perfección del mensaje de respuesta.
+13. **Bot — race condition (RESUELTO en v10):** WhatsApp entrega mensajes casi simultáneos (reenvíos) en cualquier orden y en invocaciones paralelas. El delay fijo de 2.5s de versiones previas no alcanzaba (ambas invocaciones esperaban lo mismo y despertaban juntas → doble mensaje, o peor, gasto sin comprobante). **Solución:** claims atómicos de sesión (`DELETE`/`PATCH` condicional con `return=representation` → un solo ganador por fila) + nudge diferido (la imagen espera `NUDGE_MS` y solo nudgea si nadie consumió la sesión) + 200 inmediato con procesamiento en `EdgeRuntime.waitUntil`. Probado OK en los cuatro caminos.
 
 14. **`insertarGasto` debe retornar el ID:** usar `Prefer: return=representation` y retornar `rows[0].id` para poder guardarlo en la sesión y hacer el PATCH posterior con la imagen.
+
+15. **Claims atómicos vía PostgREST (v10):** un `DELETE`/`PATCH` con filtro por `estado` + `Prefer: return=representation` es atómico a nivel de fila en Postgres (READ COMMITTED). La invocación que recibe la fila ganó; el resto recibe array vacío y hace no-op. Patrón lock-free para coordinar invocaciones paralelas de una Edge Function stateless.
+
+16. **Nudge diferido vía `EdgeRuntime.waitUntil` (v10):** permite responder 200 a Meta al instante y seguir trabajando en background (incluyendo `setTimeout`/`sleep`). Hay límite de wall-clock por invocación, pero un task de ~10s está muy por debajo. Fallback si `EdgeRuntime` no existe (local).
+
+17. **Idempotencia del webhook (v10):** Meta puede reintentar el mismo webhook. `constructora_bot_processed` (PK `msg_id`) con `ignore-duplicates` deduplica. Fail-open: si la tabla no existe, no bloquea. El cron limpia registros > 24h.
+
+18. **Campo `texto` de `constructora_bot_sessions` es vestigial (v10):** ningún flujo lo escribe. El orden "texto primero, imagen después" se resuelve con settle + re-claim en el handler de texto, no guardando el texto. No usarlo sin re-evaluar la lógica.
+
+---
+
+## Migración v9 → v10 (SQL ejecutado)
+
+```sql
+-- columna para el guard del nudge diferido
+ALTER TABLE constructora_bot_sessions
+  ADD COLUMN IF NOT EXISTS prompt_sent boolean NOT NULL DEFAULT false;
+
+-- tabla de idempotencia (evita gastos duplicados por reintentos de Meta)
+CREATE TABLE IF NOT EXISTS constructora_bot_processed (
+  msg_id text PRIMARY KEY,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+ALTER TABLE constructora_bot_processed ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "service_all" ON constructora_bot_processed USING (true) WITH CHECK (true);
+```
